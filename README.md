@@ -1,6 +1,7 @@
 ## **📌 Load Nova Hub**
 
 ```lua
+-- Executing This Script You Agree To The NovaHub Terms Of Service - [ https://github.com/4naxYT/Nova-hub/blob/main/README.md#%EF%B8%8F-disclaimer ]
 loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Latest%20NovaHub.lua'))()
 ```
 
@@ -62,13 +63,15 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ## **⚠️ Disclaimer**
 - Use at your **own risk**
 - *May* be detected by anti-cheat systems
-- The Owner Of The Script [**@xx4naxx on youtube**] Is Not Aplicable For Any Malicious Use Of This Software
-- By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* The Nova Hub Script
-- **Data** Sent, *Includes* But *Isnt **Restricted** To* :
-  - Executor Used
-  - Game Used On
-  - Script Execution Time ( ~aprox )
-  - User Blacklist Info
+
+- **Terms Of Service**
+  - The Owner Of The Script [**@xx4naxx on youtube**] Is Not Aplicable For Any Malicious Use Of This Software
+  - By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* The Nova Hub Script
+  - **Data** Sent, *Includes* But *Isnt **Restricted** To* :
+    - Executor Used
+    - Game Used On
+    - Script Execution Time ( ~aprox )
+    - User Blacklist Info
 
 ---
 
