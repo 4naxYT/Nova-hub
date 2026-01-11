@@ -75,7 +75,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **📞 Support & Updates**
-- **Do Not Complin About Being Kicked** As It Is A Result Of Our **Anti-Bypass System**
+- **Do Not Complain About Being Kicked** As It Is A Result Of Our **Anti-Bypass System**
 - Report bugs via The Youtube chanell - **@xx4naxx**
 - Check for updates regularly in the repository
 
