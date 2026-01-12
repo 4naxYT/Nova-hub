@@ -68,7 +68,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 - **Terms Of Service**
   - The Owner Of The Script [**@xx4naxx on youtube**] Is Not Aplicable For Any Malicious Use Of This Software
-  - By *Attempting* To **De-Obsfucate** This Script You **Void** All Support And Get Yourself _**Blacklisted**_
+  - By *Attempting* To **De-Obsfucate** This Script You **Void** All Support And Get Yourself _**Blacklisted Permanently**_ 
   - By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* The Nova Hub Script
   - **Data** Sent, *Includes* But *Isnt **Restricted** To* :
     - Executor Used
