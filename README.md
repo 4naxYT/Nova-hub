@@ -26,6 +26,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - Tracers
   - Head Dots
   - Look Direction
+  - Self Esp
 - **Touch Fling** / **Anti Fling**
 - **Kill / Reset** [Self]
 
@@ -49,8 +50,9 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ### ⚙️ **Optimization & Misc**
 - **Console MSG** [FE BYPASS]
 - **SaveInstance** [SAFE]
+- **Niggerify All** [Exept The Script User]
 - **FFLAGS Optimization**
-  - Material Optimization [WIP]
+  - Material Optimization [Execution Takes Some Time]
   - Lighting Optimization [WIP]
 
 ---
@@ -58,7 +60,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ## **📝 How to Use**
 1. Execute the loadstring in your preferred executor,
 2. **Wait** for the GUI to load (A Lot Of Features So It Takes Time),
-3. Enter The Key [ **cat123** ],
+3. Enter The Key [ _**cat123**_ ],
 4. Check For Errors,
 5. Customize settings to your preference.
 
@@ -79,10 +81,12 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **🔧 Supported Executors**
-- **Xeno** ( Support For *Low Unc* Too ! )
-- Bunni
-- Solara
-- etc..
+- **Xeno** [ _**https://www.xeno.onl/method**_ ] ( _Support For *Low Unc* Too !_ )
+- Bunni [ _**https://bunni.fun**_ ]
+- Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Gaurentted !_ )
+- Velocity [ _**https://work.ink/1Yct/velocitydownload**_ ] ( _May Be Bugged !_ )
+- Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
+- _etc.._
 
 ---
 
