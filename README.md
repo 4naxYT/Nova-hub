@@ -19,7 +19,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ## **✨ Features**
 
 ### 🎯 **Combat**
-- **Aimbot** – Advanced Lock System Based On [ https://github.com/Exunys/AirHub-V2 ]
+- **Aimbot** – Advanced Lock System Based On [ _https://github.com/Exunys/AirHub-V2_ ]
 - **Hitbox Extender** [BETA] – Expand player hitboxes
 - **ESP** (2D, 3D, Corner) - [ **CUSTOM** ]
   - Health Bars
