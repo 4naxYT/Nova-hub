@@ -81,7 +81,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **🔧 Supported Executors**
-- **Xeno** [ _**https://www.xeno.onl/method**_ ] ( _Support For *Low Unc* Too !_ )
+- _**Xeno**_ [ _**https://www.xeno.onl/method**_ ] ( _Support For *Low Unc* Too !_ )
 - Bunni [ _**https://bunni.fun**_ ]
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Gaurentted !_ )
 - Velocity [ _**https://work.ink/1Yct/velocitydownload**_ ] ( _May Be Bugged !_ )
