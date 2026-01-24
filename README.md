@@ -10,7 +10,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **🔧 Supported Platforms**
-- **PC** - Intended Platform
+- _**PC**_ - Intended Platform
 - *Mobile* - Not Fully Supported
 - Linux - Untested
 
@@ -48,9 +48,10 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - **Invisible Tool** [RISKY]
 
 ### ⚙️ **Optimization & Misc**
-- **Console MSG** [FE BYPASS]
+- _**Script Loader**_ [Mostly **Keyless**, And **Tested** for Efficiency]
+- **Console MSG** [Currently Bugged]
 - **SaveInstance** [SAFE]
-- **Niggerify All** [Exept The Script User]
+- **Niggerify All** [Except The Script User]
 - **FFLAGS Optimization**
   - Material Optimization [Execution Takes Some Time]
   - Lighting Optimization [WIP]
@@ -59,23 +60,24 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 ## **📝 How to Use**
 1. Execute the loadstring in your preferred executor,
-2. **Wait** for the GUI to load (A Lot Of Features, Advanced Obsfucation So It Takes Time),
-3. Enter The Key [ _**cat123**_ ],
-4. Check For Errors,
-5. Customize settings to your preference.
+2. Your Game Might **Freeze**, But It's Normal Due To Our **Advanced Encryption Method.**
+3. **Wait** for the GUI to load (A Lot Of Features, Advanced Obsfucation So It Takes Time),
+4. Enter The Key [ _**cat123**_ ],
+5. Check For Errors,
+6. Customize settings to your preference.
 
 ## **⚠️ Disclaimer**
 - Use at your **own risk**
-- *May* be detected by anti-cheat systems
+- *May* be detected by Anti-Cheat Systems
 
 - **Terms Of Service**
-  - The Owner Of The Script [**@xx4naxx on youtube**] Is Not Aplicable For Any Malicious Use Of This Software
+  - The Owner Of The Script [**@xx4naxx on YouTube**] Is Not Aplicable For Any Malicious Use of This Software
   - By *Attempting* To **De-Obsfucate** This Script You **Void** All Support And Get Yourself _**Blacklisted Permanently**_ 
   - By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* The Nova Hub Script
   - **Data** Sent, *Includes* But *Isnt **Restricted** To* :
     - Executor Used
     - Game Used On
-    - Script Execution Time ( ~aprox )
+    - Script Execution Time ( ~ *approx* )
     - User Blacklist Info
 
 ---
@@ -97,7 +99,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - NovaHub Is Currently **Offline** ( probably due to mainanence )
   - You  Might Be **BlackListed**
   - If You Are **Blacklisted** then Contact **@xx4naxx On Youtube** For An **Unblcklist** And For Instructions On How To **Refresh Blacklist Status**
-- Report bugs via The Youtube chanell - **@xx4naxx**
+- Report bugs via The Youtube channel - **@xx4naxx**
 - Check for updates regularly in the repository
 
 ---
