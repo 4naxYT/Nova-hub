@@ -1,6 +1,7 @@
 ## **📌 Load Nova Hub**
 
 Created By **@xx4naxx** On Youtube- [ **https://www.youtube.com/@xx4naxx** ]
+
 Offitial **Discord** Server- [_**https://discord.gg/8HDEWZVUem**_]
 
 ```lua
