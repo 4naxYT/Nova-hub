@@ -59,7 +59,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 ## **📝 How to Use**
 1. Execute the loadstring in your preferred executor,
-2. **Wait** for the GUI to load (A Lot Of Features So It Takes Time),
+2. **Wait** for the GUI to load (A Lot Of Features, Advanced Obsfucation So It Takes Time),
 3. Enter The Key [ _**cat123**_ ],
 4. Check For Errors,
 5. Customize settings to your preference.
