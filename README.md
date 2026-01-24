@@ -90,7 +90,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Gaurentted !_ )
 - Velocity [ _**https://work.ink/1Yct/velocitydownload**_ ] ( _May Be Bugged !_ )
 - Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
-- Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_)
+- Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_) (__Not__ Fully Supported)
 - _etc.._
 
 ---
