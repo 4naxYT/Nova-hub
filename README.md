@@ -1,6 +1,7 @@
 ## **📌 Load Nova Hub**
 
 Created By **@xx4naxx** On Youtube- [ **https://www.youtube.com/@xx4naxx** ]
+Offitial **Discord** Server- [_**https://discord.gg/8HDEWZVUem**_]
 
 ```lua
 -- By Executing This Script You Agree To The NovaHub Terms Of Service - [ https://github.com/4naxYT/Nova-hub/blob/main/README.md#%EF%B8%8F-disclaimer ]
@@ -100,7 +101,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - NovaHub Is Currently **Offline** ( probably due to mainanence )
   - You  Might Be **BlackListed**
   - If You Are **Blacklisted** then Contact **@xx4naxx On Youtube** For An **Unblcklist** And For Instructions On How To **Refresh Blacklist Status**
-- Report bugs via The Youtube channel - **@xx4naxx**
+- Report bugs via The [Discord Server](**https://discord.gg/8HDEWZVUem**)
 - Check for updates regularly in the repository
 
 ---
