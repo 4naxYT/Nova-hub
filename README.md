@@ -104,6 +104,11 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - If You Are **Blacklisted** then Contact **@xx4naxx On Youtube** For An **Unblcklist** And For Instructions On How To **Refresh Blacklist Status**
 - Report bugs via The [Discord Server](**https://discord.gg/8HDEWZVUem**)
 - Check for updates regularly in the repository
+---
+
+## **Specal Supported Games**
+- Criminality [ **[roblox.com/Criminality](https://www.roblox.com/games/4588604953/Criminality#!/game-instances)** ]
+- Dishonored [ **[roblox.com/Dishonored](https://www.roblox.com/games/138030016351973/DISHONORED-BETA-2472#!/game-instances)** ]
 
 ---
 
