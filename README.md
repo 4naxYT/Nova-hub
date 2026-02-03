@@ -49,6 +49,30 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - **Chat Visibility** [WIP]
 - **Invisible Tool** [RISKY]
 
+### 🎲 **Criminality-Specific Features**
+- **ESP Highlights**
+  - Dealers & Armory Dealers
+  - Vending Machines
+  - Safes & Broken Safes
+  - ATMs
+  - Toggle All Highlights
+- **Character Stats Manipulation**
+  - No Ragdoll/Down/Flamestun
+  - Anti-Down Carry
+  - No Limp
+  - Spoof Armor & Double XP
+  - Walk Audio Modifier
+- **Game Mechanics**
+  - EZ Lockpick
+  - Anti-Combat Zone
+  - Anti-Fog
+  - Remove Camera Shake
+  - Brightness Multiplier
+  - Speed Multiplier (1-5x)
+  - Remove Overlays [BETA]
+- **Anti-Admin Protection**
+  - Auto-kick when jailed/handcuffed
+
 ### ⚙️ **Optimization & Misc**
 - _**Script Loader**_ [Mostly **Keyless**, And **Tested** for Efficiency]
 - **Console MSG** [Currently Bugged]
