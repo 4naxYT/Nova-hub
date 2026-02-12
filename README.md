@@ -22,6 +22,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 ### 🎯 **Combat**
 - **Aimbot** – Advanced Lock System Based On [ _https://github.com/Exunys/AirHub-V2_ ]
+- **Triggerbot** - customisable delay [__CUSTOM__]
 - **Hitbox Extender** [BETA] – Expand player hitboxes
 - **ESP** (2D, 3D, Corner) - [ **CUSTOM** ]
   - Health Bars
@@ -49,29 +50,76 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - **Chat Visibility** [WIP]
 - **Invisible Tool** [RISKY]
 
-### 🎲 **Criminality-Specific Features**
-- **ESP Highlights**
-  - Dealers & Armory Dealers
-  - Vending Machines
-  - Safes & Broken Safes
-  - ATMs
-  - Toggle All Highlights
-- **Character Stats Manipulation**
-  - No Ragdoll/Down/Flamestun
-  - Anti-Down Carry
-  - No Limp
-  - Spoof Armor & Double XP
-  - Walk Audio Modifier
-- **Game Mechanics**
-  - EZ Lockpick
-  - Anti-Combat Zone
-  - Anti-Fog
-  - Remove Camera Shake
-  - Brightness Multiplier
-  - Speed Multiplier (1-5x)
-  - Remove Overlays [BETA]
-- **Anti-Admin Protection**
-  - Auto-kick when jailed/handcuffed
+
+## 🎲 Criminality-Specific Features
+
+### 👁️ ESP & Highlights
+- **Dealers** — Highlight dealers & armory dealers
+- **Vending Machines**
+- **Safes** — Highlight broken & intact safes
+- **ATMs** 
+- **Toggle All Highlights** 
+
+### 🛡️ Player Buffs & Anti-Stuns
+- **No Ragdoll / No Downed / No Flame Stun / No Bleed**
+- **Anti-Down Carry** — Prevent enemies from carrying you while downed
+- **No Limp**
+- **Anti-Combat Zone**
+- **Anti-Fog**
+- **Remove Screen Overlays [WIP]** — Blood, frost, shellshock, flashbang, concussion effects
+- **Remove Camera Shake [WIP]**
+
+### 🎭 Spoofing & Stat Modification
+- **Spoof VIP Server Status** 
+- **Spoof Armor** 
+- **Spoof Double XP Gamepass** — Attempt fake double XP
+- **Modify Level**   [CLIENT-SIDED]
+- **Modify Cash**    [CLIENT-SIDED]
+- **Modify Bounty**  [CLIENT-SIDED]
+- **Modify Bank**    [CLIENT-SIDED]
+- **Persistent Mods** — Keep modifications across respawns
+
+### ⚙️ Gameplay Utilities
+- **EZ Lockpick**
+- **Instant Interact** — Pick up cash instantly
+- **Auto Safe Loot** — Automatically loot safes
+- **Speed Multiplier** — legit / semi-rage
+- **Finish Speed Multiplier Modifier**
+- **Walk Audio Modifier** [CLIENT-SIDED]
+- **Brightness Multiplier** [CLIENT-SIDED]
+
+### 🚔 Anti-Admin / Protection
+- **Anti-Jail**
+- **Anti-Handcuff** 
+- **Auto-kick on Jail/Handcuff** — Automatically leave server when detained
+
+### 🖥️ UI & Miscellaneous
+- **Replace Server Version** — Show "Novahub" instead of game version
+- **Heavy Optimisation**
+
+
+## ⚔️ Dishonored Module
+
+### 💪 Stats & Movement
+- **Infinite Stamina** 
+- **Speed Modifier** 
+- **Attack Speed Boost**[OP] - Very fast attack speed no matter the weapon
+
+### 🛡️ Combat & State Control
+- **Not Disabled** — Prevent all disabling effects:
+  - ✅ Can always cancel actions
+  - ✅ Can always jump
+  - ✅ Can always parry
+  - ✅ Can always run
+  - ✅ Can always use items
+  - ✅ Can always counter-attack
+  - ✅ Keep both arms functional
+  - ✅ Never finished/ragdolled/parried
+  - ✅ Auto-remove downed state
+
+- **Fake Down**
+
+
 
 ### ⚙️ **Optimization & Misc**
 - _**Script Loader**_ [Mostly **Keyless**, And **Tested** for Efficiency]
