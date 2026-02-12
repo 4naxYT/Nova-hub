@@ -116,7 +116,6 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - ✅ Keep both arms functional
   - ✅ Never finished/ragdolled/parried
   - ✅ Auto-remove downed state
-
 - **Fake Down**
 
 
