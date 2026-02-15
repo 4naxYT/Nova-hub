@@ -5,6 +5,7 @@ Created By **@xx4naxx** On Youtube- [ **https://www.youtube.com/@xx4naxx** ]
 Offitial **Discord** Server- [_**https://discord.gg/8HDEWZVUem**_]
 
 ```lua
+-- Note: This is a Legit / Semi-rage Script
 -- By Executing This Script You Agree To The NovaHub Terms Of Service - [ https://github.com/4naxYT/Nova-hub/blob/main/README.md#%EF%B8%8F-disclaimer ]
 loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Latest%20NovaHub.lua'))()
 ```
