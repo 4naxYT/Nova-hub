@@ -122,7 +122,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 
 ### ⚙️ **Optimization & Misc**
-- _**Script Loader**_ [Mostly **Keyless**, And **Tested** for Efficiency]
+- _**Script Loader**_ [_**Mostly**_ Keyless, And **Tested** for Efficiency]
 - **Console MSG** [Currently Bugged]
 - **SaveInstance** [SAFE]
 - **Niggerify All** [Except The Script User]
@@ -134,20 +134,21 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 ## **📝 How to Use**
 1. Execute the loadstring in your preferred executor,
-2. Your Game Might **Freeze**, But It's Normal Due To Our **Advanced Encryption Method.**
-3. **Wait** for the GUI to load (A Lot Of Features, Advanced Obsfucation So It Takes Time),
-4. Enter The Key [ _**cat123**_ ],
-5. Check For Errors,
-6. Customize settings to your preference.
+2. Do the simple **1-step** *keysystem*,
+3. Enter your _**Key**_ in the *loader*, then into the **main Nova Keysystem,**
+4. Your Game Might **Freeze**, But It's Normal Due To Our **Advanced Encryption Method,**
+5. **Wait** for the GUI to load (A Lot Of Features, Advanced Obsfucation So It Takes Time),
+6. Check For **Errors** in the console  by typing  ```/console```  in chat or pressing  ```F9```,
+7. Customize settings to your preference.
 
 ## **⚠️ Disclaimer**
 - Use at your **own risk**
 - *May* be detected by Anti-Cheat Systems
 
 - **Terms Of Service**
-  - The Owner Of The Script [**@xx4naxx on YouTube**] Is Not Aplicable For Any Malicious Use of This Software
+  - The Owner Of The Script [**@xx4naxx on YouTube**] Is Not Applicable for Any Malicious Use of This Software
   - By *Attempting* To **De-Obsfucate** This Script You **Void** All Support And Get Yourself _**Blacklisted Permanently**_ 
-  - By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* The Nova Hub Script
+  - By **Executing** This Script You **Agree** To Sent *Personalised* **Analytic Data** To Help *Improve* Nova Hub 
   - **Data** Sent, *Includes* But *Isnt **Restricted** To* :
     - Executor Used
     - Game Used On
@@ -159,7 +160,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ## **🔧 Supported Executors**
 - _**Xeno**_ [ _**https://www.xeno.onl/method**_ ] ( _Support For *Low Unc* Too !_ )
 - Bunni [ _**https://bunni.fun**_ ]
-- Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Gaurentted !_ )
+- Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Guaranteed !_ )
 - Velocity [ _**https://work.ink/1Yct/velocitydownload**_ ] ( _May Be Bugged !_ )
 - Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
 - Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_) (__Not__ Fully Supported)
@@ -173,7 +174,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
   - Using The **Wrong** NovaHub *Version*
   - NovaHub Is Currently **Offline** ( probably due to mainanence )
   - You  Might Be **BlackListed**
-  - If You Are **Blacklisted** then Contact **@xx4naxx On Youtube** For An **Unblcklist** And For Instructions On How To **Refresh Blacklist Status**
+    - If You Are **Blacklisted** then Contact **```@xx4naxx On Youtube```** or **```.4nax On Discord```** For An **Unblacklist** And For Instructions On How To **Refresh Blacklist Status**
 - Report bugs via The [Discord Server](**https://discord.gg/8HDEWZVUem**)
 - Check for updates regularly in the repository
 ---
