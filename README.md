@@ -1,3 +1,5 @@
+> _**This is a Roblox Utility Script**_
+
 ## **📌 Load Nova Hub**
 
 Created By **@xx4naxx** On Youtube- [ **https://www.youtube.com/@xx4naxx** ]
@@ -154,6 +156,13 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
     - Game Used On
     - Script Execution Time ( ~ *approx* )
     - User Blacklist Info
+
+---
+
+## ◈ **Preffered Roblox Bootstrapper**
+- _**Frost Strap**_ [ _**https://froststrap.com/**_ ] (_Preffered_)
+- _Luczy Strap_ [ [ _**Link (too long to display)**_ ](https://release-assets.githubusercontent.com/github-production-release-asset/1080749901/50dcc930-ef16-4949-aa51-98e45be69c13?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-19T10%3A14%3A06Z&rscd=attachment%3B+filename%3DLuczystrap.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-19T09%3A13%3A24Z&ske=2026-02-19T10%3A14%3A06Z&sks=b&skv=2018-11-09&sig=qIgdFGr%2FoeSRlxJTUFYJcfHLr2rXmpTkbcwuYNOcyxI%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTQ5NTczMSwibmJmIjoxNzcxNDkzOTMxLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.A9D7unan9zlQ5yO304HvQwxIvRkVvTCUi0cZedXwcQI&response-content-disposition=attachment%3B%20filename%3DLuczystrap.exe&response-content-type=application%2Foctet-stream) ]
+- _Blox Strap_ [ [_**link (too long to display)**_](https://release-assets.githubusercontent.com/github-production-release-asset/520583586/70c759b3-a246-4b9a-9969-4a83456ef3ec?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-02-19T10%3A41%3A56Z&rscd=attachment%3B+filename%3DBloxstrap-v2.10.0.exe&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-02-19T09%3A41%3A33Z&ske=2026-02-19T10%3A41%3A56Z&sks=b&skv=2018-11-09&sig=5ZSLs1TnCliIUQHXNMF6wyA67dHHiY5EC6XfHSMWYbg%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc3MTQ5NjI5NywibmJmIjoxNzcxNDk0NDk3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.Gr_1xMCgx2kvEfhlMD6QUnshbvHi6V4lUJ8QEWrPVSE&response-content-disposition=attachment%3B%20filename%3DBloxstrap-v2.10.0.exe&response-content-type=application%2Foctet-stream) ]
 
 ---
 
