@@ -156,6 +156,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
     - Game Used On
     - Script Execution Time ( ~ *approx* )
     - User Blacklist Info
+    - Roblox Username
 
 ---
 
