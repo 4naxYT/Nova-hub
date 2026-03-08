@@ -163,8 +163,6 @@ FOVStroke.Thickness = Environment.FOVSettings.Thickness
 FOVStroke.Color = Environment.FOVSettings.Color
 FOVStroke.Parent = FOVFrame
 
-local FOVStrokeOutline = Instance.new("UIStroke") -- outline layer via second frame
-
 local FOVOuterFrame = Instance.new("Frame")
 FOVOuterFrame.Size = UDim2.fromOffset((Environment.FOVSettings.Radius + 1) * 2, (Environment.FOVSettings.Radius + 1) * 2)
 FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 0.75)
@@ -185,8 +183,8 @@ FOVOuterStroke.Parent = FOVOuterFrame
 Environment.FOVCircle = FOVFrame
 Environment.FOVCircleOutline = FOVOuterFrame
 
-setrenderproperty(Environment.FOVCircle, "Visible", false)
-setrenderproperty(Environment.FOVCircleOutline, "Visible", false)
+FOVFrame.Visible = false
+FOVOuterFrame.Visible = false
 
 --// Core Functions
 
@@ -215,16 +213,12 @@ local ConvertVector = function(Vector)
 end
 
 local CancelLock = function()
-	Environment.Locked = nil
-
-	local FOVCircle = Environment.FOVCircle--Degrade and Environment.FOVCircle or Environment.FOVCircle.__OBJECT
-
-	setrenderproperty(FOVCircle, "Color", Environment.FOVSettings.Color)
-	__newindex(UserInputService, "MouseDeltaSensitivity", OriginalSensitivity)
-
-	if Animation then
-		Animation:Cancel()
-	end
+    Environment.Locked = nil
+    FOVStroke.Color = Environment.FOVSettings.Color -- ✅
+    __newindex(UserInputService, "MouseDeltaSensitivity", OriginalSensitivity)
+    if Animation then
+        Animation:Cancel()
+    end
 end
 
 local GetClosestPlayer = function()
@@ -334,7 +328,7 @@ local Load = function()
 					__newindex(UserInputService, "MouseDeltaSensitivity", 0)
 				end
 
-				setrenderproperty(FOVCircle, "Color", FOVSettings.LockedColor)
+                FOVStroke.Color = FOVSettings.LockedColor
 			end
 		end
 	end)
