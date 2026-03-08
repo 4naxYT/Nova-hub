@@ -2,6 +2,8 @@
 
 	Universal Aimbot Module by Exunys © CC0 1.0 Universal (2023 - 2024)
 	https://github.com/Exunys
+	Forked By - @xx4naxx on Youtube
+	feature added- Compatability for the Velocity executor
 
 ]]
 
