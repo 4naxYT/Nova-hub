@@ -171,7 +171,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - _**Xeno**_ [ _**https://www.xeno.onl/method**_ ] ( _Support For *Low Unc* Too !_ )
 - Bunni [ _**https://bunni.fun**_ ]
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Guaranteed !_ )
-- Velocity [ _**https://work.ink/1Yct/velocitydownload**_ ] ( _May Be Bugged !_ )
+- Velocity [ _**https://gofile.io/d/biQGwp**_ ] ( _May Be Bugged !_ )
 - Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
 - Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_) (__Not__ Fully Supported)
 - _etc.._
