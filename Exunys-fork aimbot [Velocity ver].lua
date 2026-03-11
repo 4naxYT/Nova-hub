@@ -3,9 +3,10 @@
 	Universal Aimbot Module by Exunys © CC0 1.0 Universal (2023 - 2024)
 	https://github.com/Exunys
 	Forked By - @xx4naxx on Youtube
-	feature added- Compatibility for the Velocity executor
+	feature added- Compatability for the Velocity executor
 
 	Modified: Removed blacklist/whitelist, improved wall check (raycast + cache), fixed FOV transparency/filled.
+	Added defensive nil checks to prevent "attempt to index nil" errors.
 
 ]]
 
@@ -17,22 +18,12 @@ local Vector2new, Vector3zero, CFramenew, Color3fromRGB, Color3fromHSV, Drawingn
 local getupvalue, mousemoverel, tablefind, tableremove, stringlower, stringsub, mathclamp = debug.getupvalue, mousemoverel or (Input and Input.MouseMove), table.find, table.remove, string.lower, string.sub, math.clamp
 
 local GameMetatable = getrawmetatable and getrawmetatable(game) or {
-	-- Auxillary functions - if the executor doesn't support "getrawmetatable".
-
-	__index = function(self, Index)
-		return self[Index]
-	end,
-
-	__newindex = function(self, Index, Value)
-		self[Index] = Value
-	end
+	__index = function(self, Index) return self[Index] end,
+	__newindex = function(self, Index, Value) self[Index] = Value end
 }
 
 local __index = GameMetatable.__index
 local __newindex = GameMetatable.__newindex
-
-local getrenderproperty, setrenderproperty = getrenderproperty or __index, setrenderproperty or __newindex
-
 local GetService = __index(game, "GetService")
 
 --// Services
@@ -46,7 +37,6 @@ local Players = GetService(game, "Players")
 
 local LocalPlayer = __index(Players, "LocalPlayer")
 local Camera = __index(workspace, "CurrentCamera")
-
 local FindFirstChild, FindFirstChildOfClass = __index(game, "FindFirstChild"), __index(game, "FindFirstChildOfClass")
 local GetDescendants = __index(game, "GetDescendants")
 local WorldToViewportPoint = __index(Camera, "WorldToViewportPoint")
@@ -62,6 +52,116 @@ local Connect, Disconnect = __index(game, "DescendantAdded").Connect
 -- Wall check cache: player -> {result = bool, timestamp = number}
 local WallCheckCache = {}
 
+--// Environment Table (will be returned and assigned to getgenv)
+
+local Environment = {
+	DeveloperSettings = {
+		UpdateMode = "RenderStepped",
+		TeamCheckOption = "TeamColor",
+		RainbowSpeed = 1
+	},
+	Settings = {
+		Enabled = true,
+		TeamCheck = false,
+		AliveCheck = true,
+		WallCheck = false,
+		OffsetToMoveDirection = false,
+		OffsetIncrement = 15,
+		Sensitivity = 0,
+		Sensitivity2 = 3.5,
+		LockMode = 1,
+		LockPart = "Head",
+		TriggerKey = Enum.UserInputType.MouseButton2,
+		Toggle = false
+	},
+	FOVSettings = {
+		Enabled = true,
+		Visible = true,
+		Radius = 90,
+		NumSides = 60,
+		Thickness = 1,
+		Transparency = 1,
+		Filled = false,
+		RainbowColor = false,
+		RainbowOutlineColor = false,
+		Color = Color3fromRGB(255, 255, 255),
+		OutlineColor = Color3fromRGB(0, 0, 0),
+		LockedColor = Color3fromRGB(255, 150, 150)
+	},
+	FOVCircle = nil,
+	FOVCircleOutline = nil,
+}
+
+getgenv().ExunysDeveloperAimbot = Environment
+
+--// GUI-based FOV Circle (with nil protection)
+
+local function CreateFOVCircle()
+	local success, gui = pcall(function()
+		local FOVGui = Instance.new("ScreenGui")
+		FOVGui.Name = "ExunysAimbotFOV"
+		FOVGui.ResetOnSpawn = false
+		FOVGui.Parent = __index(LocalPlayer, "PlayerGui")
+
+		local FOVFrame = Instance.new("Frame")
+		FOVFrame.Size = UDim2.fromOffset(Environment.FOVSettings.Radius * 2, Environment.FOVSettings.Radius * 2)
+		FOVFrame.AnchorPoint = Vector2.new(0.5, 0.75)
+		FOVFrame.BackgroundTransparency = 1
+		FOVFrame.Visible = false
+		FOVFrame.ZIndex = 999
+		FOVFrame.Parent = FOVGui
+
+		local FOVFrameCorner = Instance.new("UICorner")
+		FOVFrameCorner.CornerRadius = UDim.new(1, 0)
+		FOVFrameCorner.Parent = FOVFrame
+
+		local FOVStroke = Instance.new("UIStroke")
+		FOVStroke.Thickness = Environment.FOVSettings.Thickness
+		FOVStroke.Color = Environment.FOVSettings.Color
+		FOVStroke.Parent = FOVFrame
+
+		local FOVOuterFrame = Instance.new("Frame")
+		FOVOuterFrame.Size = UDim2.fromOffset((Environment.FOVSettings.Radius + 1) * 2, (Environment.FOVSettings.Radius + 1) * 2)
+		FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 0.75)
+		FOVOuterFrame.BackgroundTransparency = 1
+		FOVOuterFrame.Visible = false
+		FOVOuterFrame.ZIndex = 998
+		FOVOuterFrame.Parent = FOVGui
+
+		local FOVOuterCorner = Instance.new("UICorner")
+		FOVOuterCorner.CornerRadius = UDim.new(1, 0)
+		FOVOuterCorner.Parent = FOVOuterFrame
+
+		local FOVOuterStroke = Instance.new("UIStroke")
+		FOVOuterStroke.Thickness = Environment.FOVSettings.Thickness + 1
+		FOVOuterStroke.Color = Environment.FOVSettings.OutlineColor
+		FOVOuterStroke.Parent = FOVOuterFrame
+
+		Environment.FOVCircle = FOVFrame
+		Environment.FOVCircleOutline = FOVOuterFrame
+		return FOVGui
+	end)
+	if not success then
+		warn("FOV GUI creation failed, FOV circle will be disabled.")
+		Environment.FOVSettings.Enabled = false
+		Environment.FOVSettings.Visible = false
+	end
+end
+
+-- Only create GUI if LocalPlayer is available
+if LocalPlayer and __index(LocalPlayer, "PlayerGui") then
+	CreateFOVCircle()
+else
+	-- Retry when LocalPlayer is added
+	local playerAddedConn
+	playerAddedConn = Connect(__index(Players, "PlayerAdded"), function(player)
+		if player == LocalPlayer then
+			CreateFOVCircle()
+			Disconnect(playerAddedConn)
+		end
+	end)
+end
+
 --// Core Functions
 
 local GetRainbowColor = function()
@@ -75,7 +175,9 @@ end
 
 local CancelLock = function()
     Environment.Locked = nil
-    FOVStroke.Color = Environment.FOVSettings.Color
+    if Environment.FOVCircle and Environment.FOVCircle:FindFirstChildOfClass("UIStroke") then
+        Environment.FOVCircle:FindFirstChildOfClass("UIStroke").Color = Environment.FOVSettings.Color
+    end
     __newindex(UserInputService, "MouseDeltaSensitivity", OriginalSensitivity)
     if Animation then
         Animation:Cancel()
@@ -86,6 +188,9 @@ local GetClosestPlayer = function()
 	local Settings = Environment.Settings
 	local LockPart = Settings.LockPart
 
+	-- Safety checks
+	if not Camera or not LocalPlayer then return end
+
 	if not Environment.Locked then
 		RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
 
@@ -94,7 +199,9 @@ local GetClosestPlayer = function()
 			local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
 
 			if Value ~= LocalPlayer and Character and FindFirstChild(Character, LockPart) and Humanoid then
-				local PartPosition, TeamCheckOption = __index(Character[LockPart], "Position"), Environment.DeveloperSettings.TeamCheckOption
+				local Part = Character[LockPart]
+				local PartPosition = __index(Part, "Position")
+				local TeamCheckOption = Environment.DeveloperSettings.TeamCheckOption
 
 				if Settings.TeamCheck and __index(Value, TeamCheckOption) == __index(LocalPlayer, TeamCheckOption) then
 					continue
@@ -123,7 +230,8 @@ local GetClosestPlayer = function()
 							local direction = PartPosition - origin
 							local raycastParams = RaycastParams.new()
 							raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-							raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Character}
+							local filter = {LocalPlayer.Character, Character}
+							raycastParams.FilterDescendantsInstances = filter
 							local rayResult = workspace:Raycast(origin, direction, raycastParams)
 							obstructed = rayResult ~= nil
 
@@ -139,8 +247,19 @@ local GetClosestPlayer = function()
 				end
 			end
 		end
-	elseif (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(__index(__index(Environment.Locked, "Character"), LockPart), "Position")))).Magnitude > RequiredDistance then
-		CancelLock()
+	else
+		-- Check if locked target is still valid
+		local lockedChar = __index(Environment.Locked, "Character")
+		if lockedChar and lockedChar[LockPart] then
+			local pos = __index(lockedChar[LockPart], "Position")
+			local screenPos = WorldToViewportPoint(Camera, pos)
+			local dist = (GetMouseLocation(UserInputService) - ConvertVector(screenPos)).Magnitude
+			if dist > RequiredDistance then
+				CancelLock()
+			end
+		else
+			CancelLock()
+		end
 	end
 end
 
@@ -150,10 +269,13 @@ local Load = function()
 	local Settings, FOVCircle, FOVCircleOutline, FOVSettings, Offset = Environment.Settings, Environment.FOVCircle, Environment.FOVCircleOutline, Environment.FOVSettings
 
 	ServiceConnections.RenderSteppedConnection = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
+		-- Safety checks
+		if not Camera or not LocalPlayer then return end
+
 		local OffsetToMoveDirection, LockPart = Settings.OffsetToMoveDirection, Settings.LockPart
 
 		-- FOV Circle update (GUI-based)
-		if FOVSettings.Enabled and Settings.Enabled then
+		if FOVSettings.Enabled and Settings.Enabled and FOVCircle and FOVCircleOutline then
 			local mousePos = GetMouseLocation(UserInputService)
 			local radius = FOVSettings.Radius
 			local color = (Environment.Locked and FOVSettings.LockedColor)
@@ -162,56 +284,68 @@ local Load = function()
 			local outlineColor = (FOVSettings.RainbowOutlineColor and GetRainbowColor()) or FOVSettings.OutlineColor
 
 			-- Position and size
-			FOVFrame.Visible = FOVSettings.Visible
-			FOVOuterFrame.Visible = FOVSettings.Visible
-			FOVFrame.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
-			FOVOuterFrame.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
-			FOVFrame.Size = UDim2.fromOffset(radius * 2, radius * 2)
-			FOVOuterFrame.Size = UDim2.fromOffset((radius + 1) * 2, (radius + 1) * 2)
+			FOVCircle.Visible = FOVSettings.Visible
+			FOVCircleOutline.Visible = FOVSettings.Visible
+			FOVCircle.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
+			FOVCircleOutline.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
+			FOVCircle.Size = UDim2.fromOffset(radius * 2, radius * 2)
+			FOVCircleOutline.Size = UDim2.fromOffset((radius + 1) * 2, (radius + 1) * 2)
 
 			-- Strokes
-			FOVStroke.Color = color
-			FOVStroke.Thickness = FOVSettings.Thickness
-			FOVOuterStroke.Color = outlineColor
-			FOVOuterStroke.Thickness = FOVSettings.Thickness + 1
+			local stroke = FOVCircle:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				stroke.Color = color
+				stroke.Thickness = FOVSettings.Thickness
+			end
+			local outlineStroke = FOVCircleOutline:FindFirstChildOfClass("UIStroke")
+			if outlineStroke then
+				outlineStroke.Color = outlineColor
+				outlineStroke.Thickness = FOVSettings.Thickness + 1
+			end
 
 			-- Fill and transparency
 			if FOVSettings.Filled then
-				FOVFrame.BackgroundTransparency = FOVSettings.Transparency
-				FOVFrame.BackgroundColor3 = color
+				FOVCircle.BackgroundTransparency = FOVSettings.Transparency
+				FOVCircle.BackgroundColor3 = color
 			else
-				FOVFrame.BackgroundTransparency = 1
+				FOVCircle.BackgroundTransparency = 1
 			end
-			-- Outer frame always fully transparent (only stroke visible)
-			FOVOuterFrame.BackgroundTransparency = 1
-		else
-			FOVFrame.Visible = false
-			FOVOuterFrame.Visible = false
+			FOVCircleOutline.BackgroundTransparency = 1
+		elseif FOVCircle and FOVCircleOutline then
+			FOVCircle.Visible = false
+			FOVCircleOutline.Visible = false
 		end
 
 		if Running and Settings.Enabled then
 			GetClosestPlayer()
 
-			Offset = OffsetToMoveDirection and __index(FindFirstChildOfClass(__index(Environment.Locked, "Character"), "Humanoid"), "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
-
 			if Environment.Locked then
-				local LockedPosition_Vector3 = __index(__index(Environment.Locked, "Character")[LockPart], "Position")
-				local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3 + Offset)
+				local lockedChar = __index(Environment.Locked, "Character")
+				if lockedChar and lockedChar[LockPart] then
+					Offset = OffsetToMoveDirection and __index(FindFirstChildOfClass(lockedChar, "Humanoid"), "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
 
-				if Environment.Settings.LockMode == 2 then
-					mousemoverel((LockedPosition.X - GetMouseLocation(UserInputService).X) / Settings.Sensitivity2, (LockedPosition.Y - GetMouseLocation(UserInputService).Y) / Settings.Sensitivity2)
-				else
-					if Settings.Sensitivity > 0 then
-						Animation = TweenService:Create(Camera, TweenInfonew(Environment.Settings.Sensitivity, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = CFramenew(Camera.CFrame.Position, LockedPosition_Vector3)})
-						Animation:Play()
+					local LockedPosition_Vector3 = __index(lockedChar[LockPart], "Position")
+					local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3 + Offset)
+
+					if Environment.Settings.LockMode == 2 then
+						mousemoverel((LockedPosition.X - GetMouseLocation(UserInputService).X) / Settings.Sensitivity2, (LockedPosition.Y - GetMouseLocation(UserInputService).Y) / Settings.Sensitivity2)
 					else
-						__newindex(Camera, "CFrame", CFramenew(Camera.CFrame.Position, LockedPosition_Vector3 + Offset))
+						if Settings.Sensitivity > 0 then
+							Animation = TweenService:Create(Camera, TweenInfonew(Environment.Settings.Sensitivity, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = CFramenew(Camera.CFrame.Position, LockedPosition_Vector3)})
+							Animation:Play()
+						else
+							__newindex(Camera, "CFrame", CFramenew(Camera.CFrame.Position, LockedPosition_Vector3 + Offset))
+						end
+
+						__newindex(UserInputService, "MouseDeltaSensitivity", 0)
 					end
 
-					__newindex(UserInputService, "MouseDeltaSensitivity", 0)
+					if FOVCircle and FOVCircle:FindFirstChildOfClass("UIStroke") then
+						FOVCircle:FindFirstChildOfClass("UIStroke").Color = FOVSettings.LockedColor
+					end
+				else
+					CancelLock()
 				end
-
-				FOVStroke.Color = FOVSettings.LockedColor
 			end
 		end
 	end)
@@ -260,137 +394,34 @@ ServiceConnections.TypingEndedConnection = Connect(__index(UserInputService, "Te
 	Typing = false
 end)
 
---// Environment
+--// Public Methods
 
-local Environment = {
-	DeveloperSettings = {
-		UpdateMode = "RenderStepped",
-		TeamCheckOption = "TeamColor",
-		RainbowSpeed = 1 -- Bigger = Slower
-	},
-
-	Settings = {
-		Enabled = true,
-
-		TeamCheck = false,
-		AliveCheck = true,
-		WallCheck = false,
-
-		OffsetToMoveDirection = false,
-		OffsetIncrement = 15,
-
-		Sensitivity = 0, -- Animation length (in seconds) before fully locking onto target
-		Sensitivity2 = 3.5, -- mousemoverel Sensitivity
-
-		LockMode = 1, -- 1 = CFrame; 2 = mousemoverel
-		LockPart = "Head", -- Body part to lock on
-
-		TriggerKey = Enum.UserInputType.MouseButton2,
-		Toggle = false
-	},
-
-	FOVSettings = {
-		Enabled = true,
-		Visible = true,
-
-		Radius = 90,
-		NumSides = 60,
-
-		Thickness = 1,
-		Transparency = 1,
-		Filled = false,
-
-		RainbowColor = false,
-		RainbowOutlineColor = false,
-		Color = Color3fromRGB(255, 255, 255),
-		OutlineColor = Color3fromRGB(0, 0, 0),
-		LockedColor = Color3fromRGB(255, 150, 150)
-	},
-
-	FOVCircle = nil,
-	FOVCircleOutline = nil,
-}
-
-getgenv().ExunysDeveloperAimbot = Environment
-
--- GUI-based FOV Circle
-local FOVGui = Instance.new("ScreenGui")
-FOVGui.Name = "ExunysAimbotFOV"
-FOVGui.ResetOnSpawn = false
-FOVGui.Parent = __index(LocalPlayer, "PlayerGui")
-
-local FOVFrame = Instance.new("Frame")
-FOVFrame.Size = UDim2.fromOffset(Environment.FOVSettings.Radius * 2, Environment.FOVSettings.Radius * 2)
-FOVFrame.AnchorPoint = Vector2.new(0.5, 0.75)
-FOVFrame.BackgroundTransparency = 1
-FOVFrame.Visible = false
-FOVFrame.ZIndex = 999
-FOVFrame.Parent = FOVGui
-
-local FOVFrameCorner = Instance.new("UICorner")
-FOVFrameCorner.CornerRadius = UDim.new(1, 0)
-FOVFrameCorner.Parent = FOVFrame
-
-local FOVStroke = Instance.new("UIStroke")
-FOVStroke.Thickness = Environment.FOVSettings.Thickness
-FOVStroke.Color = Environment.FOVSettings.Color
-FOVStroke.Parent = FOVFrame
-
-local FOVOuterFrame = Instance.new("Frame")
-FOVOuterFrame.Size = UDim2.fromOffset((Environment.FOVSettings.Radius + 1) * 2, (Environment.FOVSettings.Radius + 1) * 2)
-FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 0.75)
-FOVOuterFrame.BackgroundTransparency = 1
-FOVOuterFrame.Visible = false
-FOVOuterFrame.ZIndex = 998
-FOVOuterFrame.Parent = FOVGui
-
-local FOVOuterCorner = Instance.new("UICorner")
-FOVOuterCorner.CornerRadius = UDim.new(1, 0)
-FOVOuterCorner.Parent = FOVOuterFrame
-
-local FOVOuterStroke = Instance.new("UIStroke")
-FOVOuterStroke.Thickness = Environment.FOVSettings.Thickness + 1
-FOVOuterStroke.Color = Environment.FOVSettings.OutlineColor
-FOVOuterStroke.Parent = FOVOuterFrame
-
-Environment.FOVCircle = FOVFrame
-Environment.FOVCircleOutline = FOVOuterFrame
-
-FOVFrame.Visible = false
-FOVOuterFrame.Visible = false
-
---// Functions
-
-function Environment.Exit(self) -- METHOD | ExunysDeveloperAimbot:Exit(<void>)
+function Environment.Exit(self)
 	assert(self, "EXUNYS_AIMBOT-V3.Exit: Missing parameter #1 \"self\" <table>.")
-
 	for Index, _ in next, ServiceConnections do
 		Disconnect(ServiceConnections[Index])
 	end
-
-	Load = nil; ConvertVector = nil; CancelLock = nil; GetClosestPlayer = nil; GetRainbowColor = nil
-
-	FOVGui:Destroy()
+	if Environment.FOVCircle and Environment.FOVCircle.Parent then
+		Environment.FOVCircle.Parent:Destroy()
+	end
 	getgenv().ExunysDeveloperAimbot = nil
 end
 
-function Environment.Restart() -- ExunysDeveloperAimbot.Restart(<void>)
+function Environment.Restart()
 	for Index, _ in next, ServiceConnections do
 		Disconnect(ServiceConnections[Index])
 	end
-
 	Load()
 end
 
-function Environment.GetClosestPlayer() -- ExunysDeveloperAimbot.GetClosestPlayer(<void>)
+function Environment.GetClosestPlayer()
 	GetClosestPlayer()
 	local Value = Environment.Locked
 	CancelLock()
 	return Value
 end
 
-Environment.Load = Load -- ExunysDeveloperAimbot.Load()
-
+Environment.Load = Load
 setmetatable(Environment, {__call = Load})
 
 return Environment
