@@ -105,7 +105,7 @@ local function CreateFOVCircle()
 
 		local FOVFrame = Instance.new("Frame")
 		FOVFrame.Size = UDim2.fromOffset(Environment.FOVSettings.Radius * 2, Environment.FOVSettings.Radius * 2)
-		FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		FOVFrame.AnchorPoint = Vector2.new(0.5, 1)
 		FOVFrame.BackgroundTransparency = 1
 		FOVFrame.Visible = false
 		FOVFrame.ZIndex = 999
@@ -122,7 +122,7 @@ local function CreateFOVCircle()
 
 		local FOVOuterFrame = Instance.new("Frame")
 		FOVOuterFrame.Size = UDim2.fromOffset((Environment.FOVSettings.Radius + 1) * 2, (Environment.FOVSettings.Radius + 1) * 2)
-		FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+		FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 1)
 		FOVOuterFrame.BackgroundTransparency = 1
 		FOVOuterFrame.Visible = false
 		FOVOuterFrame.ZIndex = 998
