@@ -103,7 +103,7 @@ local Environment = {
 		Visible = true,
 		Radius = 90,
 		NumSides = 60,
-		Thickness = 1,
+		Thickness = 2, -- Increased default thickness
 		Transparency = 1,
 		Filled = false,
 		RainbowColor = false,
@@ -114,10 +114,8 @@ local Environment = {
 		YOffset = -0.007 -- Y-offset in studs (negative moves up)
 	},
 	FOVCircle = nil,
-	FOVCircleOutline = nil,
-	FOVCorner = nil,
-	FOVStroke = nil,
-	FOVOutlineStroke = nil,
+	FOVStroke = nil, -- Main colored stroke (on top)
+	FOVOutlineStroke = nil, -- Outline stroke (behind)
 	FOVGui = nil,
 }
 
@@ -155,27 +153,30 @@ local function CreateFOVCircle()
 		local FOVCorner = Instance.new("UICorner")
 		FOVCorner.CornerRadius = UDim.new(1, 0)
 		FOVCorner.Parent = FOVFrame
-		
-		Environment.FOVCorner = FOVCorner
 
-		-- Main stroke (colored outline - this will be visible)
+		-- OUTLINE STROKE (behind) - slightly thicker
+		local FOVOutlineStroke = Instance.new("UIStroke")
+		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness + 1  -- Slightly thicker to create outline effect
+		FOVOutlineStroke.Color = Environment.FOVSettings.OutlineColor
+		FOVOutlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		FOVOutlineStroke.LineJoinMode = Enum.LineJoinMode.Round
+		FOVOutlineStroke.Transparency = 0
+		FOVOutlineStroke.Parent = FOVFrame
+		FOVOutlineStroke.ZIndex = 998  -- Behind main stroke
+		
+		Environment.FOVOutlineStroke = FOVOutlineStroke
+
+		-- MAIN STROKE (on top) - this is the visible color
 		local FOVStroke = Instance.new("UIStroke")
 		FOVStroke.Thickness = Environment.FOVSettings.Thickness
 		FOVStroke.Color = Environment.FOVSettings.Color
 		FOVStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		FOVStroke.LineJoinMode = Enum.LineJoinMode.Round
+		FOVStroke.Transparency = 0
 		FOVStroke.Parent = FOVFrame
+		FOVStroke.ZIndex = 999  -- On top of outline
 		
 		Environment.FOVStroke = FOVStroke
-
-		-- Outline stroke (darker outline for contrast - will be set to OutlineColor)
-		local FOVOutlineStroke = Instance.new("UIStroke")
-		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness + 1  -- Make it slightly thicker to be behind
-		FOVOutlineStroke.Color = Environment.FOVSettings.OutlineColor
-		FOVOutlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-		FOVOutlineStroke.Parent = FOVFrame
-		FOVOutlineStroke.ZIndex = 998  -- Place behind main stroke
-		
-		Environment.FOVOutlineStroke = FOVOutlineStroke
 		
 		return FOVGui
 	end)
@@ -349,15 +350,15 @@ local Load = function()
 			FOVCircle.Position = UDim2.new(0, mousePos.X, 0, adjustedY)
 			FOVCircle.Visible = FOVSettings.Visible
 
-			-- Update strokes
-			if Environment.FOVStroke then
-				Environment.FOVStroke.Color = color
-				Environment.FOVStroke.Thickness = FOVSettings.Thickness
-			end
-			
+			-- Update strokes (Outline first, then main stroke on top)
 			if Environment.FOVOutlineStroke then
 				Environment.FOVOutlineStroke.Color = outlineColor
 				Environment.FOVOutlineStroke.Thickness = FOVSettings.Thickness + 1
+			end
+			
+			if Environment.FOVStroke then
+				Environment.FOVStroke.Color = color
+				Environment.FOVStroke.Thickness = FOVSettings.Thickness
 			end
 
 			-- Fill and transparency (if filled mode is enabled)
