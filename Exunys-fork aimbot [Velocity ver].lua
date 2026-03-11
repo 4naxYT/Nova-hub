@@ -5,8 +5,7 @@
 	Forked By - @xx4naxx on Youtube
 	feature added- Compatability for the Velocity executor
 
-	Modified: Removed blacklist/whitelist, improved wall check (raycast + cache), fixed FOV transparency/filled.
-	Added defensive nil checks to prevent "attempt to index nil" errors.
+	Modified: Removed blacklist/whitelist, improved wall check (raycast + cache), fixed FOV transparency/filled, fixed FOV centering.
 
 ]]
 
@@ -52,7 +51,7 @@ local Connect, Disconnect = __index(game, "DescendantAdded").Connect
 -- Wall check cache: player -> {result = bool, timestamp = number}
 local WallCheckCache = {}
 
---// Environment Table (will be returned and assigned to getgenv)
+--// Environment Table
 
 local Environment = {
 	DeveloperSettings = {
@@ -94,7 +93,7 @@ local Environment = {
 
 getgenv().ExunysDeveloperAimbot = Environment
 
---// GUI-based FOV Circle (with nil protection)
+--// GUI-based FOV Circle (with nil protection and proper centering)
 
 local function CreateFOVCircle()
 	local success, gui = pcall(function()
@@ -105,7 +104,7 @@ local function CreateFOVCircle()
 
 		local FOVFrame = Instance.new("Frame")
 		FOVFrame.Size = UDim2.fromOffset(Environment.FOVSettings.Radius * 2, Environment.FOVSettings.Radius * 2)
-		FOVFrame.AnchorPoint = Vector2.new(0.5, 1)
+		FOVFrame.AnchorPoint = Vector2.new(0, 0) -- We'll set position manually
 		FOVFrame.BackgroundTransparency = 1
 		FOVFrame.Visible = false
 		FOVFrame.ZIndex = 999
@@ -122,7 +121,7 @@ local function CreateFOVCircle()
 
 		local FOVOuterFrame = Instance.new("Frame")
 		FOVOuterFrame.Size = UDim2.fromOffset((Environment.FOVSettings.Radius + 1) * 2, (Environment.FOVSettings.Radius + 1) * 2)
-		FOVOuterFrame.AnchorPoint = Vector2.new(0.5, 1)
+		FOVOuterFrame.AnchorPoint = Vector2.new(0, 0)
 		FOVOuterFrame.BackgroundTransparency = 1
 		FOVOuterFrame.Visible = false
 		FOVOuterFrame.ZIndex = 998
@@ -188,7 +187,6 @@ local GetClosestPlayer = function()
 	local Settings = Environment.Settings
 	local LockPart = Settings.LockPart
 
-	-- Safety checks
 	if not Camera or not LocalPlayer then return end
 
 	if not Environment.Locked then
@@ -248,7 +246,6 @@ local GetClosestPlayer = function()
 			end
 		end
 	else
-		-- Check if locked target is still valid
 		local lockedChar = __index(Environment.Locked, "Character")
 		if lockedChar and lockedChar[LockPart] then
 			local pos = __index(lockedChar[LockPart], "Position")
@@ -269,12 +266,11 @@ local Load = function()
 	local Settings, FOVCircle, FOVCircleOutline, FOVSettings, Offset = Environment.Settings, Environment.FOVCircle, Environment.FOVCircleOutline, Environment.FOVSettings
 
 	ServiceConnections.RenderSteppedConnection = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
-		-- Safety checks
 		if not Camera or not LocalPlayer then return end
 
 		local OffsetToMoveDirection, LockPart = Settings.OffsetToMoveDirection, Settings.LockPart
 
-		-- FOV Circle update (GUI-based)
+		-- FOV Circle update (GUI-based, manually centered)
 		if FOVSettings.Enabled and Settings.Enabled and FOVCircle and FOVCircleOutline then
 			local mousePos = GetMouseLocation(UserInputService)
 			local radius = FOVSettings.Radius
@@ -283,13 +279,15 @@ local Load = function()
 				or FOVSettings.Color
 			local outlineColor = (FOVSettings.RainbowOutlineColor and GetRainbowColor()) or FOVSettings.OutlineColor
 
-			-- Position and size
+			-- Manually position so center is at mouse
+			local size = radius * 2
+			FOVCircle.Position = UDim2.fromOffset(mousePos.X - size/2, mousePos.Y - size/2)
+			FOVCircle.Size = UDim2.fromOffset(size, size)
 			FOVCircle.Visible = FOVSettings.Visible
+
+			FOVCircleOutline.Position = UDim2.fromOffset(mousePos.X - (size+1)/2, mousePos.Y - (size+1)/2)
+			FOVCircleOutline.Size = UDim2.fromOffset(size+1, size+1)
 			FOVCircleOutline.Visible = FOVSettings.Visible
-			FOVCircle.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
-			FOVCircleOutline.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
-			FOVCircle.Size = UDim2.fromOffset(radius * 2, radius * 2)
-			FOVCircleOutline.Size = UDim2.fromOffset((radius + 1) * 2, (radius + 1) * 2)
 
 			-- Strokes
 			local stroke = FOVCircle:FindFirstChildOfClass("UIStroke")
