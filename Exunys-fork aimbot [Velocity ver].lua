@@ -158,7 +158,7 @@ local function CreateFOVCircle()
 		
 		Environment.FOVCorner = FOVCorner
 
-		-- Main stroke (white outline)
+		-- Main stroke (colored outline - this will be visible)
 		local FOVStroke = Instance.new("UIStroke")
 		FOVStroke.Thickness = Environment.FOVSettings.Thickness
 		FOVStroke.Color = Environment.FOVSettings.Color
@@ -167,12 +167,13 @@ local function CreateFOVCircle()
 		
 		Environment.FOVStroke = FOVStroke
 
-		-- Inner stroke (black outline)
+		-- Outline stroke (darker outline for contrast - will be set to OutlineColor)
 		local FOVOutlineStroke = Instance.new("UIStroke")
-		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness
+		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness + 1  -- Make it slightly thicker to be behind
 		FOVOutlineStroke.Color = Environment.FOVSettings.OutlineColor
 		FOVOutlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		FOVOutlineStroke.Parent = FOVFrame
+		FOVOutlineStroke.ZIndex = 998  -- Place behind main stroke
 		
 		Environment.FOVOutlineStroke = FOVOutlineStroke
 		
@@ -215,6 +216,9 @@ local CancelLock = function()
     Environment.Locked = nil
     if Environment.FOVStroke then
         Environment.FOVStroke.Color = Environment.FOVSettings.Color
+    end
+    if Environment.FOVOutlineStroke then
+        Environment.FOVOutlineStroke.Color = Environment.FOVSettings.OutlineColor
     end
     __newindex(UserInputService, "MouseDeltaSensitivity", OriginalSensitivity)
     if Animation then
@@ -313,10 +317,27 @@ local Load = function()
 		if FOVSettings.Enabled and Settings.Enabled and FOVCircle and Environment.FOVGui then
 			local mousePos = GetMouseLocation(UserInputService)
 			local radius = FOVSettings.Radius
-			local color = (Environment.Locked and FOVSettings.LockedColor)
-				or (FOVSettings.RainbowColor and GetRainbowColor())
-				or FOVSettings.Color
-			local outlineColor = (FOVSettings.RainbowOutlineColor and GetRainbowColor()) or FOVSettings.OutlineColor
+			
+			-- Calculate colors
+			local color
+			local outlineColor
+			
+			if Environment.Locked then
+				color = FOVSettings.LockedColor
+				outlineColor = FOVSettings.OutlineColor
+			else
+				if FOVSettings.RainbowColor then
+					color = GetRainbowColor()
+				else
+					color = FOVSettings.Color
+				end
+				
+				if FOVSettings.RainbowOutlineColor then
+					outlineColor = GetRainbowColor()
+				else
+					outlineColor = FOVSettings.OutlineColor
+				end
+			end
 
 			-- Calculate Y-offset in pixels
 			local pixelOffset = getPixelOffset(FOVSettings.YOffset, Camera)
@@ -336,7 +357,7 @@ local Load = function()
 			
 			if Environment.FOVOutlineStroke then
 				Environment.FOVOutlineStroke.Color = outlineColor
-				Environment.FOVOutlineStroke.Thickness = FOVSettings.Thickness
+				Environment.FOVOutlineStroke.Thickness = FOVSettings.Thickness + 1
 			end
 
 			-- Fill and transparency (if filled mode is enabled)
@@ -376,9 +397,7 @@ local Load = function()
 						__newindex(UserInputService, "MouseDeltaSensitivity", 0)
 					end
 
-					if Environment.FOVStroke then
-						Environment.FOVStroke.Color = FOVSettings.LockedColor
-					end
+					-- Color already updated in the FOV section above
 				else
 					CancelLock()
 				end
