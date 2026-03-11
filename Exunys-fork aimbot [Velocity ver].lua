@@ -87,7 +87,7 @@ local Environment = {
 		OutlineColor = Color3fromRGB(0, 0, 0),
 		LockedColor = Color3fromRGB(255, 150, 150),
 		AnchorX = 0.5,   -- Horizontal anchor point (0-1)
-		AnchorY = 0.75   -- Vertical anchor point (0-1) – set to 0.5 for exact centering, 0.75 for offset
+		AnchorY = 1   -- Vertical anchor point (0-1) – set to 0.5 for exact centering, 0.75 for offset
 	},
 	FOVCircle = nil,
 	FOVCircleOutline = nil,
