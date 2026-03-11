@@ -5,7 +5,7 @@
 	Forked By - @xx4naxx on Youtube
 	feature added- Compatability for the Velocity executor
 
-	Modified: Removed blacklist/whitelist, improved wall check (raycast + cache), fixed FOV transparency/filled, fixed FOV centering.
+	Modified: Removed blacklist/whitelist, improved wall check (raycast + cache), fixed FOV transparency/filled, fixed FOV centering with custom anchor.
 
 ]]
 
@@ -85,7 +85,9 @@ local Environment = {
 		RainbowOutlineColor = false,
 		Color = Color3fromRGB(255, 255, 255),
 		OutlineColor = Color3fromRGB(0, 0, 0),
-		LockedColor = Color3fromRGB(255, 150, 150)
+		LockedColor = Color3fromRGB(255, 150, 150),
+		AnchorX = 0.5,   -- Horizontal anchor point (0-1)
+		AnchorY = 0.75   -- Vertical anchor point (0-1) – set to 0.5 for exact centering, 0.75 for offset
 	},
 	FOVCircle = nil,
 	FOVCircleOutline = nil,
@@ -93,7 +95,7 @@ local Environment = {
 
 getgenv().ExunysDeveloperAimbot = Environment
 
---// GUI-based FOV Circle (with nil protection and proper centering)
+--// GUI-based FOV Circle (with nil protection and custom anchor positioning)
 
 local function CreateFOVCircle()
 	local success, gui = pcall(function()
@@ -104,7 +106,7 @@ local function CreateFOVCircle()
 
 		local FOVFrame = Instance.new("Frame")
 		FOVFrame.Size = UDim2.fromOffset(Environment.FOVSettings.Radius * 2, Environment.FOVSettings.Radius * 2)
-		FOVFrame.AnchorPoint = Vector2.new(0, 0) -- We'll set position manually
+		FOVFrame.AnchorPoint = Vector2.new(0, 0) -- We'll set position manually using anchor
 		FOVFrame.BackgroundTransparency = 1
 		FOVFrame.Visible = false
 		FOVFrame.ZIndex = 999
@@ -270,7 +272,7 @@ local Load = function()
 
 		local OffsetToMoveDirection, LockPart = Settings.OffsetToMoveDirection, Settings.LockPart
 
-		-- FOV Circle update (GUI-based, manually centered)
+		-- FOV Circle update (GUI-based, positioned with custom anchor)
 		if FOVSettings.Enabled and Settings.Enabled and FOVCircle and FOVCircleOutline then
 			local mousePos = GetMouseLocation(UserInputService)
 			local radius = FOVSettings.Radius
@@ -279,13 +281,16 @@ local Load = function()
 				or FOVSettings.Color
 			local outlineColor = (FOVSettings.RainbowOutlineColor and GetRainbowColor()) or FOVSettings.OutlineColor
 
-			-- Manually position so center is at mouse
+			-- Position so that the point (AnchorX, AnchorY) of the circle aligns with the mouse
 			local size = radius * 2
-			FOVCircle.Position = UDim2.fromOffset(mousePos.X - size/2, mousePos.Y - size/2)
+			local offsetX = size * FOVSettings.AnchorX
+			local offsetY = size * FOVSettings.AnchorY
+
+			FOVCircle.Position = UDim2.fromOffset(mousePos.X - offsetX, mousePos.Y - offsetY)
 			FOVCircle.Size = UDim2.fromOffset(size, size)
 			FOVCircle.Visible = FOVSettings.Visible
 
-			FOVCircleOutline.Position = UDim2.fromOffset(mousePos.X - (size+1)/2, mousePos.Y - (size+1)/2)
+			FOVCircleOutline.Position = UDim2.fromOffset(mousePos.X - offsetX - 0.5, mousePos.Y - offsetY - 0.5) -- Slight adjustment for outline
 			FOVCircleOutline.Size = UDim2.fromOffset(size+1, size+1)
 			FOVCircleOutline.Visible = FOVSettings.Visible
 
