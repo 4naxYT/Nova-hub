@@ -9,7 +9,6 @@ This is a Mere template please use this as a guide instead of a direct plug'n pl
 
 -- Set-Up
 local V = Instance.new("Sound", workspace)
-local song = nil
 local looped = false
 local volume = 0.5
 
