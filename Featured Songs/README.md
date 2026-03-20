@@ -29,9 +29,9 @@ end
 create_musicfile("Audio/Private Pure Love Train [JJK].mp3","https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Featured%20Songs/Admiring%20You%20-%20Private%20Pure%20Love%20Train%20%5BJJK%5D.mp3")
 
 -- create and play sound:
-a.SoundId = getcustomasset("Audio/Private Pure Love Train [JJK].mp3")
-a.Looped = looped
-a.Volume = volume
-a:Play()
+V.SoundId = getcustomasset("Audio/Private Pure Love Train [JJK].mp3")
+V.Looped = looped
+V.Volume = volume
+V:Play()
 
 ```
