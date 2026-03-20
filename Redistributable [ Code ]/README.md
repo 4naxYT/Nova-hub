@@ -1,4 +1,3 @@
-```markdown
 # NovaHub Redistributable Code
 
 This repository contains redistributable modules for Roblox exploits.  
