@@ -308,7 +308,7 @@ print([[
 	Aimbot Module Courtosy of:
 	Exunys,
 	Modified For Compatability By:
-	The NovaHub Team- ( xx4naxx on YouTube )
+	The NovaHub Team- ( @xx4naxx on YouTube )
 	]])
 
 local Load = function()
