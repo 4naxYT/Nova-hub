@@ -14,7 +14,7 @@ Credit must be given in a visible way, such as:
 ## 💡 Suggestions
 
 All suggestions for improvements should be submitted through the NovaHub Discord server:  
-[https://discord.gg/8HDEWZVUem](https://discord.gg/8HDEWZVUem)
+_**[ [https://discord.gg/8HDEWZVUem](https://discord.gg/8HDEWZVUem) ]**_
 
 ---
 
