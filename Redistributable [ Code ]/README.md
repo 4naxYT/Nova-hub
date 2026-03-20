@@ -1,6 +1,6 @@
 # NovaHub Redistributable Code
 
-This repository contains redistributable modules for Roblox exploits.  
+This repository contains redistributable modules for Roblox "Code Development".  
 You are free to use them in your projects, provided that proper credit is given.
 
 ## 📌 Crediting
