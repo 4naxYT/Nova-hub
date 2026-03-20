@@ -2,6 +2,7 @@
 
 This repository contains redistributable modules for Roblox "Code Development".  
 You are free to use them in your projects, provided that proper credit is given.
+These APIs Solve the drawing API error in the velocity executor and probably many more
 
 ## 📌 Crediting
 
@@ -10,6 +11,8 @@ Credit must be given in a visible way, such as:
 - A label in your UI
 - A button
 - Any other method that clearly shows **NovaHub**'s redistributable code has been used
+
+Its not allowed to remove the credits in the script
 
 ## 💡 Suggestions
 
