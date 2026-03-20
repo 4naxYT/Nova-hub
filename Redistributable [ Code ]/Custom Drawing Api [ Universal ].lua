@@ -276,6 +276,11 @@ local function newFrame(parent)
     return f
 end
 
+print([[
+    Drawing API Courtosy of:
+    The NovaHub Team - ( @xx4naxx on YouTube )
+]])
+
 local function setAbsolute(f, x, y, w, h)
     f.Position = UDim2.fromOffset(x, y)
     f.Size     = UDim2.fromOffset(w, h)
