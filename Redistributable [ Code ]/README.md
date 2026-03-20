@@ -40,7 +40,7 @@ This aimbot module is a fork of Exunys' work, with the following modifications:
 ### Basic Usage
 
 ```lua
-local aimbot = loadstring(game:HttpGet("your_aimbot_url"))()
+local aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Redistributable%20%5B%20Code%20%5D/Exunys-fork%20aimbot%20%5BVelocity%20ver%5D.lua"))()
 
 -- Configure settings
 aimbot.Settings.Enabled = true
