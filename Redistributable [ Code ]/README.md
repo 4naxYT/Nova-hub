@@ -103,7 +103,7 @@ All drawing is done via `ScreenGui` objects, ensuring cross‑executor compatibi
 ### Usage Example
 
 ```lua
-local NovaDraw = loadstring(game:HttpGet("your_drawing_api_url"))()
+local NovaDraw = loadstring(game:HttpGet("https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Redistributable%20%5B%20Code%20%5D/Custom%20Drawing%20Api%20%5B%20Universal%20%5D.lua"))()
 
 -- Create a red circle
 local circle = NovaDraw.circle(500, 300, 50, 2, Color3.fromRGB(255, 0, 0), false, 1)
