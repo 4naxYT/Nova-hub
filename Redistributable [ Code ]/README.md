@@ -23,10 +23,12 @@ _**[ [https://discord.gg/8HDEWZVUem](https://discord.gg/8HDEWZVUem) ]**_
 
 ## 📦 Current Contents
 
-As of **20/03/2026**, the redistributable includes:
+As of **21/03/2026**, the redistributable includes:
 
 - **Aimbot API** – modified version of [Exunys Aimbot API](https://github.com/Exunys/AirHub-V2)
 - **Drawing API** – fully custom, reliable drawing library
+- **Example Code** - code demonstrating the API
+  - *NovaDraw* - displays the drawing API
 
 ---
 
