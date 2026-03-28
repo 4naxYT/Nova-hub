@@ -16,9 +16,6 @@ local Workspace = game:GetService("Workspace")
 -- Store the local player reference
 local LocalPlayer = Players.LocalPlayer
 
--- Optional: Get Fluent if available for notifications
-local Fluent = _G.Fluent or nil
-
 ---------------------------------------------------------------------
 -- INTERNAL HELPER FUNCTIONS
 ---------------------------------------------------------------------
@@ -40,33 +37,6 @@ local function getCharacterParts()
     end
     
     return char, hrp, hum
-end
-
--- Temporarily disable conflicting features and return old settings
-local function temporarilyDisableFeatures()
-    local oldSettings = {}
-    
-    -- Store current states if _G exists
-    if _G then
-        oldSettings.CustomWalkspeed = _G.CustomWalkspeed
-        oldSettings.Noclip = _G.Noclip
-        
-        -- Disable features
-        _G.CustomWalkspeed = false
-        _G.Noclip = false
-    end
-    
-    return oldSettings
-end
-
--- Restore previously disabled features
-local function restoreFeatures(oldSettings)
-    task.wait(0.5)
-    
-    if _G then
-        _G.CustomWalkspeed = oldSettings.CustomWalkspeed or false
-        _G.Noclip = oldSettings.Noclip or false
-    end
 end
 
 -- Generate waypoints between start and end positions
@@ -171,17 +141,6 @@ end
 -- Send notification (supports multiple notification systems)
 local function sendNotification(title, content, duration)
     duration = duration or 3
-    
-    -- Try Fluent first
-    if Fluent and Fluent.Notify then
-        Fluent:Notify({
-            Title = title,
-            Content = content,
-            Duration = duration
-        })
-        return true
-    end
-    
     -- Try game:GetService("StarterGui"):SetCore for Roblox notifications
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
