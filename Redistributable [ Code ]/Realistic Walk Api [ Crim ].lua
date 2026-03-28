@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------
 -- WALK TELEPORT SYSTEM (AC BYPASS)
 -- Complete standalone module with all dependencies
+-- Uses Roblox's native PathfindingService for obstacle navigation
 ---------------------------------------------------------------------
 
 -- Create a local environment for dependencies
@@ -10,11 +11,16 @@ local WalkTeleportSystem = {}
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 
 -- Store the local player reference
 local LocalPlayer = Players.LocalPlayer
+
+-- Track active movement
+local activeConnection = nil
+local activePath = nil
+local isMoving = false
 
 ---------------------------------------------------------------------
 -- INTERNAL HELPER FUNCTIONS
@@ -39,103 +45,126 @@ local function getCharacterParts()
     return char, hrp, hum
 end
 
--- Generate waypoints between start and end positions
-local function generateWaypoints(startPos, endPos, waypointDistance)
-    waypointDistance = waypointDistance or 20
+-- Create path to destination using PathfindingService
+local function createPathToDestination(startPos, endPos)
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 5,
+        AgentCanJump = true,
+        AgentMaxSlope = 45,
+        WaypointSpacing = 3,
+        Costs = {
+            Water = 10,
+            -- Default costs for other materials
+        }
+    })
     
-    local distance = (endPos - startPos).Magnitude
-    local waypointCount = math.max(math.floor(distance / waypointDistance), 5)
-    local waypoints = {}
+    local success, errorMessage = pcall(function()
+        path:ComputeAsync(startPos, endPos)
+    end)
     
-    for i = 1, waypointCount do
-        local alpha = i / waypointCount
-        local waypointPos = startPos:Lerp(endPos, alpha)
-        
-        -- Add natural movement variations
-        local randomOffset = Vector3.new(
-            math.random(-2, 2) * 0.5,
-            math.sin(i) * 1.5 + math.random(-1, 1) * 0.3,
-            math.random(-2, 2) * 0.5
-        )
-        waypointPos = waypointPos + randomOffset
-        table.insert(waypoints, waypointPos)
+    if not success or path.Status == Enum.PathStatus.NoPath then
+        return nil, nil
     end
     
-    return waypoints
+    local waypoints = path:GetWaypoints()
+    return path, waypoints
 end
 
--- Move through waypoints with realistic timing
-local function moveThroughWaypoints(hrp, waypoints)
-    for i, waypointPos in ipairs(waypoints) do
-        -- Check if character still exists
-        if not hrp or not hrp.Parent then
+-- Move along path using click-to-move (Humanoid:MoveTo)
+local function moveAlongPath(hum, waypoints)
+    if not hum or not waypoints or #waypoints == 0 then
+        return false
+    end
+    
+    isMoving = true
+    
+    -- Set up MoveToFinished connection
+    local moveCompleted = false
+    local moveFinishedConnection = nil
+    local reachedEnd = false
+    
+    -- Function to move to next waypoint
+    local function moveToWaypoint(index)
+        if not hum or not hum.Parent or index > #waypoints then
+            reachedEnd = index > #waypoints
+            if moveFinishedConnection then
+                moveFinishedConnection:Disconnect()
+            end
+            isMoving = false
             return false
         end
         
-        -- Calculate segment distance
-        local segmentDistance = i == 1 and (waypointPos - hrp.Position).Magnitude
-                                 or (waypointPos - waypoints[i-1]).Magnitude
+        local waypoint = waypoints[index]
+        local targetPosition = waypoint.Position
         
-        -- Speed variation for realism (22-26 studs/sec)
-        local speedVariation = math.random(22, 26)
-        local duration = segmentDistance / speedVariation
+        -- Move to the waypoint
+        hum:MoveTo(targetPosition)
         
-        -- Use Sine easing for smooth movement
-        local tweenInfo = TweenInfo.new(
-            duration,
-            Enum.EasingStyle.Sine,
-            Enum.EasingDirection.InOut
-        )
+        -- Wait for movement to complete or be blocked
+        local completed = false
+        local blocked = false
         
-        -- Preserve rotation while moving
-        local currentRotation = hrp.CFrame - hrp.CFrame.Position
-        local targetCFrameAtWaypoint = CFrame.new(waypointPos) * currentRotation
+        moveFinishedConnection = hum.MoveToFinished:Connect(function(reached)
+            if reached then
+                completed = true
+            else
+                blocked = true
+            end
+        end)
         
-        local tween = TweenService:Create(hrp, tweenInfo, {
-            CFrame = targetCFrameAtWaypoint
-        })
+        -- Wait for either completion or timeout
+        local timeout = 30
+        local startTime = tick()
         
-        tween:Play()
-        tween.Completed:Wait()
+        while not completed and not blocked and tick() - startTime < timeout do
+            task.wait(0.1)
+            -- Check if we're stuck
+            if hum and hum.MoveDirection.Magnitude < 0.1 and (hum.Position - targetPosition).Magnitude > 3 then
+                blocked = true
+                break
+            end
+        end
         
-        -- Random micro-pauses for human-like behavior
-        local pauseChance = math.random(1, 100)
-        if pauseChance <= 30 then
-            task.wait(math.random(5, 15) / 100) -- 0.05 to 0.15 sec pause
+        if moveFinishedConnection then
+            moveFinishedConnection:Disconnect()
+        end
+        
+        if blocked then
+            -- Try to recalculate path from current position
+            return false
+        end
+        
+        return true
+    end
+    
+    -- Move through all waypoints
+    local currentWaypoint = 1
+    while currentWaypoint <= #waypoints and hum and hum.Parent do
+        local success = moveToWaypoint(currentWaypoint)
+        if not success then
+            -- Recalculate path from current position
+            local newPath, newWaypoints = createPathToDestination(hum.Position, waypoints[#waypoints].Position)
+            if newPath and newWaypoints and #newWaypoints > 0 then
+                waypoints = newWaypoints
+                currentWaypoint = 1
+            else
+                break
+            end
         else
-            task.wait(0.03) -- Minimum frame delay
+            currentWaypoint = currentWaypoint + 1
         end
-        
-        -- Occasionally look around
-        if i % 5 == 0 then
-            local lookOffset = CFrame.Angles(0, math.rad(math.random(-20, 20)), 0)
-            hrp.CFrame = hrp.CFrame * lookOffset
-            task.wait(0.05)
-        end
+        task.wait(0.05)
     end
     
-    return true
-end
-
--- Final landing and cleanup
-local function finalizeMovement(hrp, hum, targetCFrame)
-    -- Smooth landing
-    local finalTween = TweenService:Create(hrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        CFrame = targetCFrame * CFrame.new(0, 3, 0)
-    })
-    finalTween:Play()
-    finalTween.Completed:Wait()
+    isMoving = false
     
-    task.wait(0.2)
-    
-    -- Reset velocity
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    hrp.AssemblyAngularVelocity = Vector3.zero
-    
-    -- Ensure proper landing state
-    if hum then
-        hum:ChangeState(Enum.HumanoidStateType.Landed)
+    -- Final arrival
+    if reachedEnd or (currentWaypoint > #waypoints) then
+        return true
     end
+    
+    return false
 end
 
 -- Send notification (supports multiple notification systems)
@@ -156,27 +185,43 @@ local function sendNotification(title, content, duration)
     return true
 end
 
+-- Cancel current movement
+local function cancelCurrentMovement(hum)
+    if isMoving and hum then
+        hum:MoveTo(hum.Position) -- Cancel movement by moving to current position
+        hum:MoveTo(Vector3.zero) -- Alternative method to stop
+        hum.AutoRotate = true
+        if activeConnection then
+            activeConnection:Disconnect()
+            activeConnection = nil
+        end
+        isMoving = false
+        return true
+    end
+    return false
+end
+
 ---------------------------------------------------------------------
 -- MAIN EXPORTED FUNCTIONS
 ---------------------------------------------------------------------
 
--- Primary walk teleport function
+-- Primary walk teleport function using click-to-move
 -- @param targetCFrame: CFrame - Destination CFrame
 -- @param options: table - Optional parameters
---   - waypointDistance: number - Distance between waypoints (default: 20)
 --   - silent: boolean - Suppress notifications (default: false)
 --   - requireShift: boolean - Require shift to be held (default: true)
 --   - maxDistance: number - Max distance to walk (default: nil = no limit)
+--   - waitForCompletion: boolean - Wait for movement to finish (default: true)
 -- @returns: boolean - Success status
 function WalkTeleportSystem.walkto(targetCFrame, options)
     options = options or {}
-    local waypointDistance = options.waypointDistance or 20
     local silent = options.silent or false
     local requireShift = options.requireShift ~= false
     local maxDistance = options.maxDistance
+    local waitForCompletion = options.waitForCompletion ~= false
     
     -- Validate input
-    if not targetCFrame or not targetCFrame then
+    if not targetCFrame then
         if not silent then
             sendNotification("Error", "Invalid destination", 3)
         end
@@ -200,6 +245,9 @@ function WalkTeleportSystem.walkto(targetCFrame, options)
         return false
     end
     
+    -- Cancel any existing movement
+    cancelCurrentMovement(hum)
+    
     -- Check distance limit
     if maxDistance then
         local distance = (hrp.Position - targetCFrame.Position).Magnitude
@@ -211,38 +259,53 @@ function WalkTeleportSystem.walkto(targetCFrame, options)
         end
     end
     
-    -- Temporarily disable conflicting features
-    local oldSettings = temporarilyDisableFeatures()
-    
-    -- Generate waypoints
+    -- Create path to destination
     local startPos = hrp.Position
     local endPos = targetCFrame.Position
-    local waypoints = generateWaypoints(startPos, endPos, waypointDistance)
     
     if not silent then
-        sendNotification("🚶 Walking Safely...", 
-               "Ultra-stealth mode (" .. #waypoints .. " waypoints)", 3)
+        sendNotification("🚶 Calculating Path...", "Finding optimal route", 2)
     end
     
-    -- Move through waypoints
-    local moveSuccess = moveThroughWaypoints(hrp, waypoints)
+    local path, waypoints = createPathToDestination(startPos, endPos)
     
-    if not moveSuccess then
+    if not path or not waypoints or #waypoints == 0 then
         if not silent then
-            sendNotification("Error", "Movement interrupted", 2)
+            sendNotification("Error", "No path found to destination", 3)
         end
-        restoreFeatures(oldSettings)
         return false
     end
     
-    -- Final landing and cleanup
-    finalizeMovement(hrp, hum, targetCFrame)
-    
-    -- Restore previous settings
-    restoreFeatures(oldSettings)
-    
     if not silent then
-        sendNotification("✅ Arrived Safely", "Teleport complete - AC bypassed", 2)
+        sendNotification("🚶 Walking Safely...", 
+               "Using Roblox pathfinding (" .. #waypoints .. " waypoints)", 3)
+    end
+    
+    -- Move along the path
+    local moveSuccess = false
+    
+    if waitForCompletion then
+        moveSuccess = moveAlongPath(hum, waypoints)
+    else
+        -- Start movement but don't wait for completion
+        isMoving = true
+        moveSuccess = true
+        
+        -- Start coroutine to handle movement
+        task.spawn(function()
+            moveAlongPath(hum, waypoints)
+        end)
+    end
+    
+    if not moveSuccess and waitForCompletion then
+        if not silent then
+            sendNotification("Error", "Path blocked or movement interrupted", 2)
+        end
+        return false
+    end
+    
+    if waitForCompletion and not silent then
+        sendNotification("✅ Arrived Safely", "Destination reached - AC bypassed", 2)
     end
     
     return true
@@ -322,16 +385,19 @@ function WalkTeleportSystem.walktoLocation(locationName, options)
         Motel = CFrame.new(-4619.04, 5.33, -897.38),
         Tower = CFrame.new(-4483.96, 5.33, -787.30),
         Dealer = CFrame.new(-4526.13, 5.33, -842.42),
-        Bank = CFrame.new(-4625.00, 5.00, -350.00), -- idk
-        Police = CFrame.new(-4720.00, 5.00, -450.00), -- idk
-        Hospital = CFrame.new(-4580.00, 5.00, -550.00) -- idk
+        Bank = CFrame.new(-4625.00, 5.00, -350.00),
+        Police = CFrame.new(-4720.00, 5.00, -450.00),
+        Hospital = CFrame.new(-4580.00, 5.00, -550.00)
     }
     
     local targetCFrame = locations[locationName]
     if not targetCFrame then
         if not (options and options.silent) then
-            local available = table.concat(table.keys(locations), ", ")
-            sendNotification("Location Not Found", "Available: " .. available, 5)
+            local available = {}
+            for k, _ in pairs(locations) do
+                table.insert(available, k)
+            end
+            sendNotification("Location Not Found", "Available: " .. table.concat(available, ", "), 5)
         end
         return false
     end
@@ -339,16 +405,46 @@ function WalkTeleportSystem.walktoLocation(locationName, options)
     return WalkTeleportSystem.walkto(targetCFrame, options)
 end
 
--- Cancel current movement (if any)
--- Note: This function requires storing tween references which would need modification
--- For now, returns false as full implementation requires more complex state management
+-- Cancel current movement
+-- @returns: boolean - Whether movement was cancelled
 function WalkTeleportSystem.cancelMovement()
-    -- This would require storing the current tween reference
-    -- For simplicity, we'll return false
-    return false
+    local _, hrp, hum = getCharacterParts()
+    return cancelCurrentMovement(hum)
 end
 
--- Check if a walk operation is possible
+-- Check if currently moving
+-- @returns: boolean - Whether a walk operation is in progress
+function WalkTeleportSystem.isMoving()
+    return isMoving
+end
+
+-- Check if a walk operation is possible to a destination
+-- @param destination: CFrame/Vector3 - Destination to check
+-- @returns: table with status information
+function WalkTeleportSystem.checkPathExists(destination)
+    local _, hrp = getCharacterParts()
+    if not hrp then
+        return {
+            pathExists = false,
+            error = "No character found"
+        }
+    end
+    
+    local destPos = destination
+    if typeof(destination) == "CFrame" then
+        destPos = destination.Position
+    end
+    
+    local path, waypoints = createPathToDestination(hrp.Position, destPos)
+    
+    return {
+        pathExists = path ~= nil and waypoints ~= nil and #waypoints > 0,
+        waypointCount = waypoints and #waypoints or 0,
+        error = path and waypoints and #waypoints > 0 and nil or "No path found"
+    }
+end
+
+-- Check if a walk operation is possible (general status)
 -- @returns: table with status information
 function WalkTeleportSystem.checkStatus()
     local char, hrp, hum = getCharacterParts()
@@ -358,7 +454,8 @@ function WalkTeleportSystem.checkStatus()
         hasHumanoidRootPart = hrp ~= nil,
         hasHumanoid = hum ~= nil,
         isAlive = hum and hum.Health > 0 or false,
-        shiftHeld = isShiftHeld()
+        shiftHeld = isShiftHeld(),
+        isMoving = isMoving
     }
 end
 
@@ -373,6 +470,8 @@ if _G then
     _G.WalkToPlayer = WalkTeleportSystem.walktoPlayer
     _G.WalkToModel = WalkTeleportSystem.walktoModel
     _G.WalkToLocation = WalkTeleportSystem.walktoLocation
+    _G.CancelWalk = WalkTeleportSystem.cancelMovement
+    _G.IsWalking = WalkTeleportSystem.isMoving
     _G.WalkTeleportSystem = WalkTeleportSystem
 end
 
