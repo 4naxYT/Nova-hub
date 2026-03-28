@@ -34,7 +34,7 @@ end
 
 -- Get character and required parts with validation
 local function getCharacterParts()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local char = Workspace.Characters[tostring(Players.LocalPlayer)]
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChild("Humanoid")
     
