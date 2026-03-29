@@ -35,13 +35,13 @@ local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
 
 local Locations = {
     Cafe = CFrame.new(-4616.97, 6.00, -281.97),
-    Subway = CFrame.new(-4600.73, 2.39, -684.50),
+    Subway = CFrame.new(-4690.14, -32.29, -693.97),
     Motel = CFrame.new(-4619.04, 5.33, -897.38),
-    Tower = CFrame.new(-4483.96, 5.33, -787.30),
-    Dealer = CFrame.new(-4526.13, 5.33, -842.42),
-    Bank = CFrame.new(-4625.00, 5.00, -350.00),
-    Police = CFrame.new(-4720.00, 5.00, -450.00),
-    Hospital = CFrame.new(-4580.00, 5.00, -550.00),
+    Tower = CFrame.new(-4490.34, 3.29, -759.60),
+    Factory = CFrame.new(-4305.15, 3.93, -609.54),
+    Pizza = CFrame.new(-4373.28, 4, -174.13),
+    Junk_Yard = CFrame.new(-3852.35, 3.89, -361.91),
+    Basket_Ball = CFrame.new(-4830.70, 3.60, -241.91),
 }
 
 ---------------------------------------------------------------------
