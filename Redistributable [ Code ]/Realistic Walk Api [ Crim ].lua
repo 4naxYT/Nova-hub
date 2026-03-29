@@ -1,479 +1,452 @@
 ---------------------------------------------------------------------
--- WALK TELEPORT SYSTEM (AC BYPASS)
--- Complete standalone module with all dependencies
--- Uses Roblox's native PathfindingService for obstacle navigation
+-- WALK TO SYSTEM (Based on Auto-Farm Script)
+-- Uses Roblox PathfindingService with Humanoid:MoveTo
+-- Includes anti-stuck teleport fallback and visual waypoints
 ---------------------------------------------------------------------
 
--- Create a local environment for dependencies
-local WalkTeleportSystem = {}
+local WalkToSystem = {}
 
--- Get required services
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+-- Services
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
--- Store the local player reference
+-- Local references
 local LocalPlayer = Players.LocalPlayer
+local Character = nil
+local Humanoid = nil
+local HumanoidRootPart = nil
 
--- Track active movement
-local activeConnection = nil
-local activePath = nil
-local isMoving = false
+-- State variables
+local CurrentlyPathing = false
+local CurrentPath = nil
+local CurrentWaypoint = nil
+local VisualFolder = nil
+local Pass = false
+
+-- Tween info for visual effects
+local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 ---------------------------------------------------------------------
--- INTERNAL HELPER FUNCTIONS
+-- PREDEFINED LOCATIONS (from auto-farm map)
 ---------------------------------------------------------------------
 
--- Check if shift key is being held
-local function isShiftHeld()
-    return UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or 
-           UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
-end
+local Locations = {
+    Cafe = CFrame.new(-4616.97, 6.00, -281.97),
+    Subway = CFrame.new(-4600.73, 2.39, -684.50),
+    Motel = CFrame.new(-4619.04, 5.33, -897.38),
+    Tower = CFrame.new(-4483.96, 5.33, -787.30),
+    Dealer = CFrame.new(-4526.13, 5.33, -842.42),
+    Bank = CFrame.new(-4625.00, 5.00, -350.00),
+    Police = CFrame.new(-4720.00, 5.00, -450.00),
+    Hospital = CFrame.new(-4580.00, 5.00, -550.00),
+}
 
--- Get character and required parts with validation
-local function getCharacterParts()
-    local char = Workspace.Characters[tostring(Players.LocalPlayer)]
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChild("Humanoid")
-    
-    if not hrp or not hum then
-        return nil, nil, nil
+---------------------------------------------------------------------
+-- VISUAL WAYPOINTS
+---------------------------------------------------------------------
+
+local function CreateVisualPoint(Position)
+    if not VisualFolder then
+        VisualFolder = Instance.new("Folder", Workspace)
+        VisualFolder.Name = "PathVisuals_WalkToSystem"
     end
     
-    return char, hrp, hum
+    local A = Instance.new("Part")
+    local B = Instance.new("SelectionSphere")
+    A.Anchored = true
+    A.CanCollide = false
+    A.Size = Vector3.new(0.001, 0.001, 0.001)
+    A.Position = Position + Vector3.new(0, 2, 0)
+    A.Transparency = 1
+    A.Parent = VisualFolder
+    A.Name = tostring(Position)
+    B.Transparency = 1
+    B.Parent = A
+    B.Adornee = A
+    B.Color3 = Color3.new(1, 0, 0.0156863)
+    TweenService:Create(B, TweenI, {Transparency = 0}):Play()
 end
 
--- Create path to destination using PathfindingService
-local function createPathToDestination(startPos, endPos)
+local function UpdateVisualPoint(Point, Remove, Color)
+    task.spawn(function()
+        if Remove == true then
+            TweenService:Create(Point, TweenI, {Color3 = Color3.new(0.454902, 0.454902, 0.454902)}):Play()
+            TweenService:Create(Point, TweenI, {Transparency = 1}):Play()
+            wait(1)
+            Point.Parent:Destroy()
+        else
+            TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
+        end
+    end)
+end
+
+local function ClearVisualPoints()
+    if VisualFolder then
+        for i, v in pairs(VisualFolder:GetChildren()) do
+            if v:FindFirstChild("SelectionSphere") then
+                UpdateVisualPoint(v.SelectionSphere, true)
+            else
+                v:Destroy()
+            end
+        end
+    end
+end
+
+---------------------------------------------------------------------
+-- HELPER FUNCTIONS
+---------------------------------------------------------------------
+
+local function isPointInsidePart(part, point)
+    local size = part.Size
+    local position = part.Position
+    
+    local minX = position.X - size.X / 2
+    local maxX = position.X + size.X / 2
+    local minY = position.Y - size.Y / 2
+    local maxY = position.Y + size.Y / 2
+    local minZ = position.Z - size.Z / 2
+    local maxZ = position.Z + size.Z / 2
+    
+    if point.X > minX and point.X < maxX and 
+       point.Y > minY and point.Y < maxY and 
+       point.Z > minZ and point.Z < maxZ then
+        return true
+    end
+    return false
+end
+
+local function isPositionInsidePart(position)
+    local params = OverlapParams.new()
+    params.FilterType = Enum.RaycastFilterType.Whitelist
+    params.FilterDescendantsInstances = { Workspace.Map }
+    
+    local parts = workspace:GetPartBoundsInRadius(position, 20, params)
+    
+    for i = 1, #parts do
+        local part = parts[i]
+        if part:IsA("Part") and part.CanCollide == true and isPointInsidePart(part, position) then
+            return true
+        end
+    end
+    return false
+end
+
+local function checkVisibility()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {player.Character}
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            raycastParams.IgnoreWater = true
+            local result = workspace:Raycast(player.Character.Head.Position, 
+                (Character.PrimaryPart.Position - player.Character.Head.Position).Unit * 70)
+            if result and result.Instance:IsDescendantOf(Character) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+---------------------------------------------------------------------
+-- UPDATE CHARACTER REFERENCE
+---------------------------------------------------------------------
+
+local function UpdateCharacterReferences()
+    Character = LocalPlayer.Character
+    if Character then
+        Humanoid = Character:FindFirstChild("Humanoid")
+        HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+    end
+    return Character and Humanoid and HumanoidRootPart
+end
+
+---------------------------------------------------------------------
+-- MAIN WALK FUNCTION
+---------------------------------------------------------------------
+
+-- Walk to a destination (CFrame, Vector3, or BasePart)
+function WalkToSystem.WalkTo(Destination, Options)
+    Options = Options or {}
+    local ShowVisuals = Options.ShowVisuals ~= false
+    local AutoJump = Options.AutoJump ~= false
+    local SkipInvalidWaypoints = Options.SkipInvalidWaypoints ~= false
+    local AntiStuck = Options.AntiStuck ~= false
+    
+    -- Update character references
+    if not UpdateCharacterReferences() then
+        warn("[WalkToSystem] Character not found")
+        return false
+    end
+    
+    -- Get destination position
+    local DestinationPosition
+    if typeof(Destination) == "CFrame" then
+        DestinationPosition = Destination.Position
+    elseif typeof(Destination) == "Vector3" then
+        DestinationPosition = Destination
+    elseif Destination:IsA("BasePart") then
+        DestinationPosition = Destination.Position
+    else
+        warn("[WalkToSystem] Invalid destination type")
+        return false
+    end
+    
+    -- Clear previous path visuals
+    ClearVisualPoints()
+    
+    -- Create path
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
-        AgentHeight = 5,
+        AgentHeight = 4,
         AgentCanJump = true,
-        AgentMaxSlope = 45,
-        WaypointSpacing = 3,
-        Costs = {
-            Water = 10,
-            -- Default costs for other materials
-        }
+        AgentCanClimb = true
     })
     
     local success, errorMessage = pcall(function()
-        path:ComputeAsync(startPos, endPos)
+        path:ComputeAsync(HumanoidRootPart.Position, DestinationPosition)
     end)
     
-    if not success or path.Status == Enum.PathStatus.NoPath then
-        return nil, nil
-    end
-    
-    local waypoints = path:GetWaypoints()
-    return path, waypoints
-end
-
--- Move along path using click-to-move (Humanoid:MoveTo)
-local function moveAlongPath(hum, waypoints)
-    if not hum or not waypoints or #waypoints == 0 then
+    if not success or path.Status ~= Enum.PathStatus.Success then
+        warn("[WalkToSystem] No path found to destination")
         return false
     end
     
-    isMoving = true
+    CurrentPath = path
+    CurrentlyPathing = true
     
-    -- Set up MoveToFinished connection
-    local moveCompleted = false
-    local moveFinishedConnection = nil
-    local reachedEnd = false
-    
-    -- Function to move to next waypoint
-    local function moveToWaypoint(index)
-        if not hum or not hum.Parent or index > #waypoints then
-            reachedEnd = index > #waypoints
-            if moveFinishedConnection then
-                moveFinishedConnection:Disconnect()
-            end
-            isMoving = false
-            return false
-        end
-        
-        local waypoint = waypoints[index]
-        local targetPosition = waypoint.Position
-        
-        -- Move to the waypoint
-        hum:MoveTo(targetPosition)
-        
-        -- Wait for movement to complete or be blocked
-        local completed = false
-        local blocked = false
-        
-        moveFinishedConnection = hum.MoveToFinished:Connect(function(reached)
-            if reached then
-                completed = true
-            else
-                blocked = true
-            end
-        end)
-        
-        -- Wait for either completion or timeout
-        local timeout = 30
-        local startTime = tick()
-        
-        while not completed and not blocked and tick() - startTime < timeout do
-            task.wait(0.1)
-            -- Check if we're stuck
-            if hum and hum.MoveDirection.Magnitude < 0.1 and (hum.Position - targetPosition).Magnitude > 3 then
-                blocked = true
-                break
-            end
-        end
-        
-        if moveFinishedConnection then
-            moveFinishedConnection:Disconnect()
-        end
-        
-        if blocked then
-            -- Try to recalculate path from current position
-            return false
-        end
-        
-        return true
-    end
-    
-    -- Move through all waypoints
-    local currentWaypoint = 1
-    while currentWaypoint <= #waypoints and hum and hum.Parent do
-        local success = moveToWaypoint(currentWaypoint)
-        if not success then
-            -- Recalculate path from current position
-            local newPath, newWaypoints = createPathToDestination(hum.Position, waypoints[#waypoints].Position)
-            if newPath and newWaypoints and #newWaypoints > 0 then
-                waypoints = newWaypoints
-                currentWaypoint = 1
-            else
-                break
-            end
-        else
-            currentWaypoint = currentWaypoint + 1
-        end
-        task.wait(0.05)
-    end
-    
-    isMoving = false
-    
-    -- Final arrival
-    if reachedEnd or (currentWaypoint > #waypoints) then
-        return true
-    end
-    
-    return false
-end
-
--- Send notification (supports multiple notification systems)
-local function sendNotification(title, content, duration)
-    duration = duration or 3
-    -- Try game:GetService("StarterGui"):SetCore for Roblox notifications
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = title,
-            Text = content,
-            Duration = duration
-        })
-    end)
-    
-    -- Fallback to print
-    print(string.format("[WalkTeleport] %s: %s", title, content))
-    
-    return true
-end
-
--- Cancel current movement
-local function cancelCurrentMovement(hum)
-    if isMoving and hum then
-        hum:MoveTo(hum.Position) -- Cancel movement by moving to current position
-        hum:MoveTo(Vector3.zero) -- Alternative method to stop
-        hum.AutoRotate = true
-        if activeConnection then
-            activeConnection:Disconnect()
-            activeConnection = nil
-        end
-        isMoving = false
-        return true
-    end
-    return false
-end
-
----------------------------------------------------------------------
--- MAIN EXPORTED FUNCTIONS
----------------------------------------------------------------------
-
--- Primary walk teleport function using click-to-move
--- @param targetCFrame: CFrame - Destination CFrame
--- @param options: table - Optional parameters
---   - silent: boolean - Suppress notifications (default: false)
---   - requireShift: boolean - Require shift to be held (default: true)
---   - maxDistance: number - Max distance to walk (default: nil = no limit)
---   - waitForCompletion: boolean - Wait for movement to finish (default: true)
--- @returns: boolean - Success status
-function WalkTeleportSystem.walkto(targetCFrame, options)
-    options = options or {}
-    local silent = options.silent or false
-    local requireShift = options.requireShift ~= false
-    local maxDistance = options.maxDistance
-    local waitForCompletion = options.waitForCompletion ~= false
-    
-    -- Validate input
-    if not targetCFrame then
-        if not silent then
-            sendNotification("Error", "Invalid destination", 3)
-        end
-        return false
-    end
-    
-    -- Check shift requirement
-    if requireShift and not isShiftHeld() then
-        if not silent then
-            sendNotification("⚠️ Hold SHIFT!", "Hold SHIFT while clicking to bypass anticheat", 5)
-        end
-        return false
-    end
-    
-    -- Get character parts
-    local char, hrp, hum = getCharacterParts()
-    if not hrp or not hum then
-        if not silent then
-            sendNotification("Error", "Could not find character parts", 3)
-        end
-        return false
-    end
-    
-    -- Cancel any existing movement
-    cancelCurrentMovement(hum)
-    
-    -- Check distance limit
-    if maxDistance then
-        local distance = (hrp.Position - targetCFrame.Position).Magnitude
-        if distance > maxDistance then
-            if not silent then
-                sendNotification("Distance Limit", string.format("Target too far (%.0f > %.0f)", distance, maxDistance), 3)
-            end
-            return false
+    -- Create visual waypoints
+    if ShowVisuals then
+        for i, v in pairs(CurrentPath:GetWaypoints()) do
+            CreateVisualPoint(v.Position)
         end
     end
     
-    -- Create path to destination
-    local startPos = hrp.Position
-    local endPos = targetCFrame.Position
+    local waypoints = CurrentPath:GetWaypoints()
+    local TimesFailed = 0
+    local SkipNext = false
     
-    if not silent then
-        sendNotification("🚶 Calculating Path...", "Finding optimal route", 2)
-    end
-    
-    local path, waypoints = createPathToDestination(startPos, endPos)
-    
-    if not path or not waypoints or #waypoints == 0 then
-        if not silent then
-            sendNotification("Error", "No path found to destination", 3)
-        end
-        return false
-    end
-    
-    if not silent then
-        sendNotification("🚶 Walking Safely...", 
-               "Using Roblox pathfinding (" .. #waypoints .. " waypoints)", 3)
-    end
-    
-    -- Move along the path
-    local moveSuccess = false
-    
-    if waitForCompletion then
-        moveSuccess = moveAlongPath(hum, waypoints)
-    else
-        -- Start movement but don't wait for completion
-        isMoving = true
-        moveSuccess = true
-        
-        -- Start coroutine to handle movement
+    -- Anti-stuck loop
+    if AntiStuck then
         task.spawn(function()
-            moveAlongPath(hum, waypoints)
+            while task.wait(0.5) and CurrentlyPathing == true do
+                if TimesFailed >= 2 then
+                    repeat task.wait() until not checkVisibility()
+                    print("[WalkToSystem] Stuck, teleporting to next waypoint")
+                    Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                    Humanoid:MoveTo(CurrentWaypoint.Position)
+                    TimesFailed = 0
+                end
+                
+                if HumanoidRootPart and (HumanoidRootPart.Velocity).Magnitude < 0.07 then
+                    Humanoid:MoveTo(CurrentWaypoint.Position)
+                    task.wait(0.2)
+                    if (HumanoidRootPart.Velocity).Magnitude < 0.07 then
+                        local targetPosition = CurrentWaypoint.Position
+                        local charPosition = HumanoidRootPart.Position
+                        local dx = targetPosition.X - charPosition.X
+                        local dz = targetPosition.Z - charPosition.Z
+                        local distance = math.sqrt(dx * dx + dz * dz)
+                        if distance < 3 and not checkVisibility() then
+                            print("[WalkToSystem] Stuck, teleporting to waypoint")
+                            Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                            Humanoid:MoveTo(CurrentWaypoint.Position)
+                            TimesFailed = 0
+                        else
+                            TimesFailed = TimesFailed + 1
+                            Humanoid.Jump = true
+                            task.wait()
+                            Humanoid:MoveTo(CurrentWaypoint.Position)
+                        end
+                    end
+                else
+                    TimesFailed = 0
+                end
+            end
         end)
     end
     
-    if not moveSuccess and waitForCompletion then
-        if not silent then
-            sendNotification("Error", "Path blocked or movement interrupted", 2)
+    -- Walk through waypoints
+    for i, v in pairs(waypoints) do
+        if not CurrentlyPathing then
+            break
         end
-        return false
+        
+        if ShowVisuals and VisualFolder and VisualFolder[tostring(v.Position)] then
+            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0.0980392, 1, 0))
+        end
+        
+        if not SkipNext then
+            CurrentWaypoint = v
+            Humanoid:MoveTo(v.Position)
+            
+            -- Wait to reach waypoint
+            repeat 
+                task.wait() 
+            until not CurrentlyPathing or (HumanoidRootPart.Position - v.Position).Magnitude < 3.8
+            
+            -- Handle jump waypoints
+            if AutoJump and waypoints[i + 1] and waypoints[i + 1].Action == Enum.PathWaypointAction.Jump then
+                task.spawn(function()
+                    task.wait(0.1)
+                    Humanoid.Jump = true
+                end)
+            end
+            
+            -- Check if next waypoint is inside a part (skip it)
+            if SkipInvalidWaypoints and waypoints[i + 1] and isPositionInsidePart(waypoints[i + 1].Position + Vector3.new(0, 2, 0)) then
+                SkipNext = true
+            end
+            
+            -- Callback
+            if Options.OnWaypointReached then
+                Options.OnWaypointReached(v, i)
+            end
+        elseif SkipNext then
+            SkipNext = false
+        end
+        
+        if ShowVisuals and VisualFolder and VisualFolder[tostring(v.Position)] then
+            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
+        end
     end
     
-    if waitForCompletion and not silent then
-        sendNotification("✅ Arrived Safely", "Destination reached - AC bypassed", 2)
+    CurrentlyPathing = false
+    
+    if Options.OnPathComplete then
+        Options.OnPathComplete()
     end
     
     return true
 end
 
--- Walk to a Vector3 position
--- @param position: Vector3 - Destination position
--- @param options: table - Same options as walkto()
-function WalkTeleportSystem.walktoPosition(position, options)
-    return WalkTeleportSystem.walkto(CFrame.new(position), options)
-end
+---------------------------------------------------------------------
+-- WALK TO PREDEFINED LOCATION
+---------------------------------------------------------------------
 
--- Walk to a BasePart
--- @param part: BasePart - Destination part
--- @param options: table - Same options as walkto()
-function WalkTeleportSystem.walktoPart(part, options)
-    if not part or not part:IsA("BasePart") then
-        if not (options and options.silent) then
-            sendNotification("Error", "Invalid part", 2)
-        end
-        return false
-    end
-    return WalkTeleportSystem.walkto(part.CFrame, options)
-end
-
--- Walk to a player's character
--- @param player: Player - Target player
--- @param options: table - Same options as walkto()
-function WalkTeleportSystem.walktoPlayer(player, options)
-    if not player or not player.Character then
-        if not (options and options.silent) then
-            sendNotification("Error", "Player not found", 2)
-        end
-        return false
-    end
+-- Walk to a named location
+function WalkToSystem.WalkToLocation(locationName, Options)
+    local targetCFrame = Locations[locationName]
     
-    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        if not (options and options.silent) then
-            sendNotification("Error", "Player has no HumanoidRootPart", 2)
-        end
-        return false
-    end
-    
-    return WalkTeleportSystem.walkto(hrp.CFrame, options)
-end
-
--- Walk to a model (uses PrimaryPart or first BasePart)
--- @param model: Model - Target model
--- @param options: table - Same options as walkto()
-function WalkTeleportSystem.walktoModel(model, options)
-    if not model or not model:IsA("Model") then
-        if not (options and options.silent) then
-            sendNotification("Error", "Invalid model", 2)
-        end
-        return false
-    end
-    
-    local targetPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then
-        if not (options and options.silent) then
-            sendNotification("Error", "Model has no reachable part", 2)
-        end
-        return false
-    end
-    
-    return WalkTeleportSystem.walkto(targetPart.CFrame, options)
-end
-
--- Walk to a named location (predefined waypoints)
--- @param locationName: string - Name of location
--- @param options: table - Same options as walkto()
-function WalkTeleportSystem.walktoLocation(locationName, options)
-    local locations = {
-        Cafe = CFrame.new(-4616.97, 6.00, -281.97),
-        Subway = CFrame.new(-4600.73, 2.39, -684.50),
-        Motel = CFrame.new(-4619.04, 5.33, -897.38),
-        Tower = CFrame.new(-4483.96, 5.33, -787.30),
-        Dealer = CFrame.new(-4526.13, 5.33, -842.42),
-        Bank = CFrame.new(-4625.00, 5.00, -350.00),
-        Police = CFrame.new(-4720.00, 5.00, -450.00),
-        Hospital = CFrame.new(-4580.00, 5.00, -550.00)
-    }
-    
-    local targetCFrame = locations[locationName]
     if not targetCFrame then
-        if not (options and options.silent) then
-            local available = {}
-            for k, _ in pairs(locations) do
-                table.insert(available, k)
+        -- Try case-insensitive match
+        for name, cframe in pairs(Locations) do
+            if string.lower(name) == string.lower(locationName) then
+                targetCFrame = cframe
+                break
             end
-            sendNotification("Location Not Found", "Available: " .. table.concat(available, ", "), 5)
         end
+    end
+    
+    if not targetCFrame then
+        local available = {}
+        for name, _ in pairs(Locations) do
+            table.insert(available, name)
+        end
+        warn("[WalkToSystem] Location not found: " .. locationName .. ". Available: " .. table.concat(available, ", "))
         return false
     end
     
-    return WalkTeleportSystem.walkto(targetCFrame, options)
+    return WalkToSystem.WalkTo(targetCFrame, Options)
 end
+
+---------------------------------------------------------------------
+-- HELPER FUNCTIONS
+---------------------------------------------------------------------
 
 -- Cancel current movement
--- @returns: boolean - Whether movement was cancelled
-function WalkTeleportSystem.cancelMovement()
-    local _, hrp, hum = getCharacterParts()
-    return cancelCurrentMovement(hum)
+function WalkToSystem.Cancel()
+    CurrentlyPathing = false
+    if Humanoid then
+        Humanoid:MoveTo(HumanoidRootPart and HumanoidRootPart.Position or Vector3.zero)
+    end
+    ClearVisualPoints()
+    return true
 end
 
 -- Check if currently moving
--- @returns: boolean - Whether a walk operation is in progress
-function WalkTeleportSystem.isMoving()
-    return isMoving
+function WalkToSystem.IsMoving()
+    return CurrentlyPathing
 end
 
--- Check if a walk operation is possible to a destination
--- @param destination: CFrame/Vector3 - Destination to check
--- @returns: table with status information
-function WalkTeleportSystem.checkPathExists(destination)
-    local _, hrp = getCharacterParts()
-    if not hrp then
-        return {
-            pathExists = false,
-            error = "No character found"
-        }
+-- Check if path exists to a location
+function WalkToSystem.CanReach(Destination)
+    if not UpdateCharacterReferences() then
+        return false
     end
     
-    local destPos = destination
-    if typeof(destination) == "CFrame" then
-        destPos = destination.Position
+    local DestPos
+    if typeof(Destination) == "CFrame" then
+        DestPos = Destination.Position
+    elseif typeof(Destination) == "Vector3" then
+        DestPos = Destination
+    elseif Destination:IsA("BasePart") then
+        DestPos = Destination.Position
+    elseif type(Destination) == "string" then
+        local locCFrame = Locations[Destination]
+        if locCFrame then
+            DestPos = locCFrame.Position
+        else
+            return false
+        end
+    else
+        return false
     end
     
-    local path, waypoints = createPathToDestination(hrp.Position, destPos)
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 4,
+        AgentCanJump = true,
+        AgentCanClimb = true
+    })
     
-    return {
-        pathExists = path ~= nil and waypoints ~= nil and #waypoints > 0,
-        waypointCount = waypoints and #waypoints or 0,
-        error = path and waypoints and #waypoints > 0 and nil or "No path found"
-    }
+    local success = pcall(function()
+        path:ComputeAsync(HumanoidRootPart.Position, DestPos)
+    end)
+    
+    return success and path.Status == Enum.PathStatus.Success
 end
 
--- Check if a walk operation is possible (general status)
--- @returns: table with status information
-function WalkTeleportSystem.checkStatus()
-    local char, hrp, hum = getCharacterParts()
-    
-    return {
-        characterExists = char ~= nil,
-        hasHumanoidRootPart = hrp ~= nil,
-        hasHumanoid = hum ~= nil,
-        isAlive = hum and hum.Health > 0 or false,
-        shiftHeld = isShiftHeld(),
-        isMoving = isMoving
-    }
+-- Get all available location names
+function WalkToSystem.GetLocations()
+    local locations = {}
+    for name, _ in pairs(Locations) do
+        table.insert(locations, name)
+    end
+    return locations
+end
+
+-- Add a custom location
+function WalkToSystem.AddLocation(name, cframe)
+    Locations[name] = cframe
+    return true
 end
 
 ---------------------------------------------------------------------
--- GLOBAL EXPORTS 
+-- CLEANUP
+---------------------------------------------------------------------
+
+function WalkToSystem.Destroy()
+    WalkToSystem.Cancel()
+    if VisualFolder then
+        VisualFolder:Destroy()
+        VisualFolder = nil
+    end
+end
+
+---------------------------------------------------------------------
+-- GLOBAL EXPORTS
 ---------------------------------------------------------------------
 
 if _G then
-    _G.WalkTo = WalkTeleportSystem.walkto
-    _G.WalkToPosition = WalkTeleportSystem.walktoPosition
-    _G.WalkToPart = WalkTeleportSystem.walktoPart
-    _G.WalkToPlayer = WalkTeleportSystem.walktoPlayer
-    _G.WalkToModel = WalkTeleportSystem.walktoModel
-    _G.WalkToLocation = WalkTeleportSystem.walktoLocation
-    _G.CancelWalk = WalkTeleportSystem.cancelMovement
-    _G.IsWalking = WalkTeleportSystem.isMoving
-    _G.WalkTeleportSystem = WalkTeleportSystem
+    _G.WalkTo = WalkToSystem.WalkTo
+    _G.WalkToLocation = WalkToSystem.WalkToLocation
+    _G.CancelWalk = WalkToSystem.Cancel
+    _G.IsWalking = WalkToSystem.IsMoving
+    _G.WalkToSystem = WalkToSystem
 end
 
--- Return the module
-return WalkTeleportSystem
+return WalkToSystem
