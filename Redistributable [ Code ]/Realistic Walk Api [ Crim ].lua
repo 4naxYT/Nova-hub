@@ -372,7 +372,12 @@ function WalkToSystem.IsMoving()
     return CurrentlyPathing
 end
 
--- Check if path exists to a location
+-- Get current waypoint (for UI)
+function WalkToSystem.GetCurrentWaypoint()
+    return CurrentWaypoint
+end
+
+-- Check if path exists to a destination
 function WalkToSystem.CanReach(Destination)
     if not UpdateCharacterReferences() then
         return false
