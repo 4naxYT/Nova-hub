@@ -2,6 +2,7 @@
 -- WALK TO SYSTEM (Based on Auto-Farm Script)
 -- Uses Roblox PathfindingService with Humanoid:MoveTo
 -- Includes anti-stuck teleport fallback and visual waypoints
+-- Can Reach is currently bugged
 ---------------------------------------------------------------------
 
 local WalkToSystem = {}
