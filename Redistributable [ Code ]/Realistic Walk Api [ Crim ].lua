@@ -34,9 +34,9 @@ local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
 -- PREDEFINED LOCATIONS (from auto-farm map)
 ---------------------------------------------------------------------
 
-local Locations = {
+local Locations = { -- criminality
     Cafe = CFrame.new(-4599.47, 3.89, -296.98),
-    Subway = CFrame.new(-4690.14, -32.29, -693.97),
+    Subway = CFrame.new(-4590.86, 3.65, -694.64),
     Motel = CFrame.new(-4619.04, 5.33, -897.38),
     Tower = CFrame.new(-4490.34, 3.29, -759.60),
     Factory = CFrame.new(-4305.15, 3.93, -609.54),
