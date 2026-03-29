@@ -35,7 +35,7 @@ local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
 ---------------------------------------------------------------------
 
 local Locations = {
-    Cafe = CFrame.new(-4616.97, 6.00, -281.97),
+    Cafe = CFrame.new(-4599.47, 3.89, -296.98),
     Subway = CFrame.new(-4690.14, -32.29, -693.97),
     Motel = CFrame.new(-4619.04, 5.33, -897.38),
     Tower = CFrame.new(-4490.34, 3.29, -759.60),
