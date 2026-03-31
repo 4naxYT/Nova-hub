@@ -122,7 +122,15 @@ end
 local function isPositionInsidePart(position)
     local params = OverlapParams.new()
     params.FilterType = Enum.RaycastFilterType.Whitelist
-    params.FilterDescendantsInstances = { Workspace.Map }
+    
+    -- Collect Map children excluding Doors and safes
+    local mapChildren = {}
+    for _, child in pairs(Workspace.Map:GetChildren()) do
+        if child.Name ~= "Doors" or child.Name ~= "BredMakurz" then
+            table.insert(mapChildren, child)
+        end
+    end
+    params.FilterDescendantsInstances = mapChildren
     
     local parts = workspace:GetPartBoundsInRadius(position, 20, params)
     
