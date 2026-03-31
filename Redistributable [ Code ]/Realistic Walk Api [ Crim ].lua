@@ -2,6 +2,7 @@
 -- WALK TO SYSTEM (Based on Auto-Farm Script)
 -- Uses Roblox PathfindingService with Humanoid:MoveTo
 -- Includes anti-stuck teleport fallback and visual waypoints
+-- Falls back to native ClickToMove pathfinding if no path found
 -- Can Reach is currently bugged, so ignore it
 ---------------------------------------------------------------------
 
@@ -33,7 +34,7 @@ local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
 -- PREDEFINED LOCATIONS (from auto-farm map)
 ---------------------------------------------------------------------
 
-local Locations = { -- criminality
+local Locations = {
     Cafe = CFrame.new(-4599.47, 3.89, -296.98),
     Subway = CFrame.new(-4590.86, 3.65, -694.64),
     Motel = CFrame.new(-4619.04, 5.33, -897.38),
@@ -119,7 +120,6 @@ local function isPositionInsidePart(position)
     local params = OverlapParams.new()
     params.FilterType = Enum.RaycastFilterType.Whitelist
 
-    -- Exclude Doors and BredMakurz from blocking waypoint checks
     local mapChildren = {}
     for _, child in pairs(Workspace.Map:GetChildren()) do
         if child.Name ~= "Doors" and child.Name ~= "BredMakurz" then
@@ -171,6 +171,246 @@ local function UpdateCharacterReferences()
 end
 
 ---------------------------------------------------------------------
+-- NATIVE CLICKTOMOVE FALLBACK
+-- Extracted from Roblox's ClickToMove implementation.
+-- Only activates when custom PathfindingService fails to find a path.
+-- Automatically moves to destination without requiring user input.
+---------------------------------------------------------------------
+
+local function NativeFallbackWalkTo(DestinationPosition, Options)
+    Options = Options or {}
+    print("[WalkToSystem] Custom path failed, using native ClickToMove fallback")
+
+    local XZ_VECTOR3 = Vector3.new(1, 0, 1)
+
+    -- Occlusion check: is there a clear line between two points?
+    local function CheckOcclusion(point1, point2)
+        local diffVector = point2 - point1
+        local directionVector = diffVector.Unit
+        local torsoRadius = Vector3.new(
+            HumanoidRootPart.Size.X / 2, 0, HumanoidRootPart.Size.Z / 2
+        )
+        local rightVector = Vector3.new(0, 1, 0):Cross(directionVector) * torsoRadius
+
+        local function doRay(origin, direction)
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = {Character}
+            params.FilterType = Enum.RaycastFilterType.Blacklist
+            return workspace:Raycast(origin, direction, params)
+        end
+
+        if doRay(point1 + rightVector, diffVector + rightVector) then return false end
+        if doRay(point1, diffVector) then return false end
+        if doRay(point1 - rightVector, diffVector - rightVector) then return false end
+
+        -- Make sure there's ground to walk on between the two points
+        local studsBetweenSamples = 2
+        for i = 1, math.floor(diffVector.Magnitude / studsBetweenSamples) do
+            local samplePoint = point1 + directionVector * i * studsBetweenSamples
+            local downParams = RaycastParams.new()
+            downParams.FilterDescendantsInstances = {Character}
+            downParams.FilterType = Enum.RaycastFilterType.Blacklist
+            if not workspace:Raycast(samplePoint, Vector3.new(0, -7, 0), downParams) then
+                return false
+            end
+        end
+
+        return true
+    end
+
+    -- Try a direct straight-line path first (ClickToMove DirectPath logic)
+    local function TryDirectPath()
+        local startPt = HumanoidRootPart.Position
+        local finishPt = DestinationPosition
+        local diff = finishPt - startPt
+
+        if diff.Magnitude < 150 then
+            -- Step back 2 studs so we don't collide with the target object
+            finishPt = finishPt - diff.Unit * 2
+            if CheckOcclusion(startPt, finishPt) then
+                return {finishPt}
+            end
+        end
+        return nil
+    end
+
+    -- Compute path using native PathfindingService with ClosestNoPath fallback
+    local function ComputeNativePath()
+        local path = PathfindingService:CreatePath({
+            AgentRadius = 2,
+            AgentHeight = 4,
+            AgentCanJump = true,
+            AgentCanClimb = true,
+        })
+
+        local startPos = HumanoidRootPart.Position - Vector3.new(0, 3, 0)
+
+        local success = pcall(function()
+            path:ComputeAsync(startPos, DestinationPosition)
+        end)
+
+        if not success then return nil end
+
+        -- Accept ClosestNoPath if waypoints got us reasonably close
+        if path.Status == Enum.PathStatus.Success or path.Status == Enum.PathStatus.ClosestNoPath then
+            local waypoints = path:GetWaypoints()
+            if #waypoints > 0 then
+                return waypoints
+            end
+        end
+
+        -- FailStartNotEmpty: try neighboring cells as alternate start points
+        if path.Status == Enum.PathStatus.FailStartNotEmpty then
+            local roundedPos = Vector3.new(
+                math.floor((HumanoidRootPart.Position.X - 2) / 4 + 0.5) * 4 + 2,
+                math.floor((HumanoidRootPart.Position.Y - 2) / 4 + 0.5) * 4 + 2,
+                math.floor((HumanoidRootPart.Position.Z - 2) / 4 + 0.5) * 4 + 2
+            )
+            local offsets = {
+                Vector3.new(-4, 0, -4), Vector3.new(-4, 0, 4),
+                Vector3.new(4, 0, -4),  Vector3.new(4, 0, 4),
+            }
+            for _, offset in pairs(offsets) do
+                local altStart = roundedPos + offset
+                local altPath = PathfindingService:CreatePath({
+                    AgentRadius = 2, AgentHeight = 4,
+                    AgentCanJump = true, AgentCanClimb = true,
+                })
+                local altSuccess = pcall(function()
+                    altPath:ComputeAsync(altStart, DestinationPosition)
+                end)
+                if altSuccess and altPath.Status == Enum.PathStatus.Success then
+                    local waypoints = altPath:GetWaypoints()
+                    if #waypoints > 0 then
+                        return waypoints
+                    end
+                end
+            end
+        end
+
+        return nil
+    end
+
+    -- Smooth path by removing unnecessary intermediate waypoints
+    local function SmoothWaypoints(waypointList)
+        local positions = {}
+        for _, wp in pairs(waypointList) do
+            table.insert(positions, wp.Position)
+        end
+
+        local i = #positions - 1
+        while i >= 2 do
+            local prev = positions[i - 1]
+            local curr = positions[i]
+            local next = positions[i + 1]
+            -- If prev, curr, next are all at the same Y and line of sight is clear, remove curr
+            if math.abs(curr.Y - prev.Y) < 0.1 and math.abs(curr.Y - next.Y) < 0.1 then
+                if CheckOcclusion(prev, next) then
+                    table.remove(positions, i)
+                end
+            end
+            i -= 1
+        end
+
+        return positions
+    end
+
+    -- Walk through a flat list of Vector3 positions (native fallback movement)
+    local function WalkPositions(positions)
+        CurrentlyPathing = true
+
+        local TimesFailed = 0
+
+        -- Reuse same anti-stuck logic
+        task.spawn(function()
+            while task.wait(0.5) and CurrentlyPathing do
+                if TimesFailed >= 2 then
+                    repeat task.wait() until not checkVisibility()
+                    print("[WalkToSystem] Fallback anti-stuck: teleporting")
+                    Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                    Humanoid:MoveTo(CurrentWaypoint.Position)
+                    TimesFailed = 0
+                    continue
+                end
+
+                if HumanoidRootPart and HumanoidRootPart.Velocity.Magnitude < 0.07 then
+                    Humanoid:MoveTo(CurrentWaypoint.Position)
+                    task.wait(0.2)
+                    if HumanoidRootPart.Velocity.Magnitude < 0.07 then
+                        local dist = (CurrentWaypoint.Position - HumanoidRootPart.Position)
+                        local xzDist = Vector3.new(dist.X, 0, dist.Z).Magnitude
+                        if xzDist < 3 and not checkVisibility() then
+                            Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                            Humanoid:MoveTo(CurrentWaypoint.Position)
+                            TimesFailed = 0
+                        else
+                            TimesFailed += 1
+                            Humanoid.Jump = true
+                            task.wait()
+                            Humanoid:MoveTo(CurrentWaypoint.Position)
+                        end
+                    end
+                else
+                    TimesFailed = 0
+                end
+            end
+        end)
+
+        for _, pos in pairs(positions) do
+            if not CurrentlyPathing then break end
+
+            -- Wrap position into a fake waypoint table so anti-stuck can read .Position
+            CurrentWaypoint = {Position = pos}
+            Humanoid:MoveTo(pos)
+
+            local waypointTimer = 0
+            repeat
+                task.wait(0.1)
+                waypointTimer += 0.1
+
+                -- Auto-jump if we need to go upward (from ClickToMove YieldUntilPointReached)
+                local diff = pos - HumanoidRootPart.Position
+                local xzMag = Vector3.new(diff.X, 0, diff.Z).Magnitude
+                if xzMag < 6 and diff.Y >= 2.2 then
+                    Humanoid.Jump = true
+                end
+
+                if waypointTimer >= 20 then
+                    TimesFailed += 2
+                    print("[WalkToSystem] Fallback waypoint timeout, triggering anti-stuck")
+                    break
+                end
+            until not CurrentlyPathing or (HumanoidRootPart.Position - pos).Magnitude < 3.8
+        end
+
+        CurrentlyPathing = false
+
+        if Options.OnPathComplete then
+            Options.OnPathComplete()
+        end
+
+        return true
+    end
+
+    -- Try direct path first, then full native compute
+    local directPositions = TryDirectPath()
+    if directPositions then
+        print("[WalkToSystem] Fallback: using direct line path")
+        return WalkPositions(directPositions)
+    end
+
+    local nativeWaypoints = ComputeNativePath()
+    if nativeWaypoints then
+        print("[WalkToSystem] Fallback: using native computed path")
+        local smoothed = SmoothWaypoints(nativeWaypoints)
+        return WalkPositions(smoothed)
+    end
+
+    warn("[WalkToSystem] Fallback also failed, no path available")
+    return false
+end
+
+---------------------------------------------------------------------
 -- MAIN WALK FUNCTION
 ---------------------------------------------------------------------
 
@@ -212,9 +452,10 @@ function WalkToSystem.WalkTo(Destination, Options)
         path:ComputeAsync(HumanoidRootPart.Position, DestinationPosition)
     end)
 
+    -- Primary path failed: hand off to native fallback
     if not success or path.Status ~= Enum.PathStatus.Success then
-        warn("[WalkToSystem] No path found to destination")
-        return false
+        warn("[WalkToSystem] Primary path failed, attempting native fallback")
+        return NativeFallbackWalkTo(DestinationPosition, Options)
     end
 
     CurrentPath = path
@@ -231,13 +472,10 @@ function WalkToSystem.WalkTo(Destination, Options)
     local TimesFailed = 0
     local SkipNext = false
 
-    -- Anti-stuck loop: fires every 0.5s
-    -- Triggers on low velocity (distance check) OR TimesFailed >= 2 (timeout feed)
     if AntiStuck then
         task.spawn(function()
             while task.wait(0.5) and CurrentlyPathing do
 
-                -- Teleport threshold: triggered by distance-stuck OR 20s timeout
                 if TimesFailed >= 2 then
                     repeat task.wait() until not checkVisibility()
                     print("[WalkToSystem] Anti-stuck: teleporting to waypoint")
@@ -269,14 +507,12 @@ function WalkToSystem.WalkTo(Destination, Options)
                         end
                     end
                 else
-                    -- Moving fine, reset counter
                     TimesFailed = 0
                 end
             end
         end)
     end
 
-    -- Walk through waypoints
     for i, v in pairs(waypoints) do
         if not CurrentlyPathing then break end
 
@@ -288,20 +524,17 @@ function WalkToSystem.WalkTo(Destination, Options)
             CurrentWaypoint = v
             Humanoid:MoveTo(v.Position)
 
-            -- Wait to reach waypoint with 20s timeout feeding into anti-stuck
             local waypointTimer = 0
             repeat
                 task.wait(0.1)
                 waypointTimer += 0.1
                 if waypointTimer >= 20 then
-                    -- Feed directly into anti-stuck: += 2 guarantees threshold hit next tick
                     TimesFailed += 2
                     print("[WalkToSystem] Waypoint timeout (20s), triggering anti-stuck")
                     break
                 end
             until not CurrentlyPathing or (HumanoidRootPart.Position - v.Position).Magnitude < 3.8
 
-            -- Handle jump waypoints
             if AutoJump and waypoints[i + 1] and waypoints[i + 1].Action == Enum.PathWaypointAction.Jump then
                 task.spawn(function()
                     task.wait(0.1)
@@ -309,7 +542,6 @@ function WalkToSystem.WalkTo(Destination, Options)
                 end)
             end
 
-            -- Skip next waypoint if it's inside geometry
             if SkipInvalidWaypoints and waypoints[i + 1] and isPositionInsidePart(waypoints[i + 1].Position + Vector3.new(0, 2, 0)) then
                 SkipNext = true
             end
