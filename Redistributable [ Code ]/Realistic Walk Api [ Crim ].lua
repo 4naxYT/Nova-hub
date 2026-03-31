@@ -166,9 +166,71 @@ end
 -- Only activates when the primary custom path fails entirely.
 ---------------------------------------------------------------------
 
+---------------------------------------------------------------------
+-- NATIVE CLICKTOMOVE FALLBACK
+-- Based on Roblox's updated 2017 ClickToMove (Garnold revision).
+-- Uses FindPathAsync + MoveToFinished event-driven traversal,
+-- with surface normal ground-snap retry and short-range direct walk.
+-- Only activates when the primary custom path fails entirely.
+-- Now includes visual waypoints support!
+---------------------------------------------------------------------
+
 local function NativeFallbackWalkTo(DestinationPosition, Options)
     Options = Options or {}
+    local ShowVisuals = Options.ShowVisuals ~= false
+    local VisualMarkers = {} -- Track visual markers for this fallback path
+    
     print("[WalkToSystem] Primary path failed — engaging native fallback")
+
+    -- Helper to clear fallback visuals
+    local function ClearFallbackVisuals()
+        for _, marker in pairs(VisualMarkers) do
+            if marker and marker.Parent then
+                UpdateVisualPoint(marker.SelectionSphere, true)
+            end
+        end
+        VisualMarkers = {}
+    end
+
+    -- Helper to create fallback visuals
+    local function CreateFallbackVisuals(waypoints)
+        if not ShowVisuals then return end
+        ClearFallbackVisuals()
+        for _, v in pairs(waypoints) do
+            if v.Position then
+                local marker = CreateVisualPoint(v.Position)
+                -- Store the marker for later updates
+                if VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
+                    table.insert(VisualMarkers, VisualFolder[tostring(v.Position)])
+                end
+            end
+        end
+    end
+
+    -- Helper to update visual marker for current waypoint
+    local function UpdateFallbackVisualCurrent(position)
+        if not ShowVisuals or not VisualFolder then return end
+        local marker = VisualFolder:FindFirstChild(tostring(position))
+        if marker and marker:FindFirstChild("SelectionSphere") then
+            UpdateVisualPoint(marker.SelectionSphere, false, Color3.new(0.098, 1, 0))
+        end
+    end
+
+    -- Helper to mark a waypoint as completed
+    local function MarkFallbackVisualComplete(position)
+        if not ShowVisuals or not VisualFolder then return end
+        local marker = VisualFolder:FindFirstChild(tostring(position))
+        if marker and marker:FindFirstChild("SelectionSphere") then
+            UpdateVisualPoint(marker.SelectionSphere, true)
+        end
+        -- Remove from tracking
+        for i, m in pairs(VisualMarkers) do
+            if m == marker then
+                table.remove(VisualMarkers, i)
+                break
+            end
+        end
+    end
 
     -- Try to ground-snap the destination using a surface normal offset,
     -- same as ClickToMove does when PathComputed fails on first attempt.
@@ -205,13 +267,23 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
 
         -- First attempt
         local waypoints = tryCompute(targetPoint)
-        if waypoints then return waypoints end
+        if waypoints then 
+            if ShowVisuals then
+                CreateFallbackVisuals(waypoints)
+            end
+            return waypoints 
+        end
 
         -- Retry with ground-snapped destination (ClickToMove fallback behavior)
         local snapped = TryGroundSnap(targetPoint)
         if snapped ~= targetPoint then
             waypoints = tryCompute(snapped)
-            if waypoints then return waypoints end
+            if waypoints then 
+                if ShowVisuals then
+                    CreateFallbackVisuals(waypoints)
+                end
+                return waypoints 
+            end
         end
 
         return nil
@@ -225,6 +297,14 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
             print("[WalkToSystem] Fallback: direct short-range walk")
             CurrentlyPathing = true
             CurrentWaypoint = {Position = targetPoint}
+            
+            -- Create a single visual marker for direct walk
+            if ShowVisuals then
+                local marker = CreateVisualPoint(targetPoint)
+                if marker and marker:FindFirstChild("SelectionSphere") then
+                    UpdateVisualPoint(marker.SelectionSphere, false, Color3.new(0.098, 1, 0))
+                end
+            end
 
             if Humanoid.Sit then
                 Humanoid.Jump = true
@@ -247,6 +327,14 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
                 t += 0.1
             until reached or not CurrentlyPathing or t >= 15
 
+            -- Clean up direct walk visual
+            if ShowVisuals and VisualFolder then
+                local marker = VisualFolder:FindFirstChild(tostring(targetPoint))
+                if marker and marker:FindFirstChild("SelectionSphere") then
+                    UpdateVisualPoint(marker.SelectionSphere, true)
+                end
+            end
+
             CurrentlyPathing = false
             if Options.OnPathComplete then Options.OnPathComplete() end
             return true
@@ -267,6 +355,11 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
         local moveConn = nil
 
         local TimesFailed = 0
+
+        -- Update initial waypoint visual
+        if ShowVisuals and waypointList[currentIndex] then
+            UpdateFallbackVisualCurrent(waypointList[currentIndex].Position)
+        end
 
         -- Anti-stuck: same logic as primary path
         local antiStuckThread = task.spawn(function()
@@ -308,6 +401,11 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
 
         -- MoveToFinished-driven traversal (2017 Pather pattern)
         local function moveToNext()
+            -- Mark current waypoint as complete before moving to next
+            if currentIndex <= #waypointList and ShowVisuals then
+                MarkFallbackVisualComplete(waypointList[currentIndex].Position)
+            end
+            
             currentIndex += 1
 
             if currentIndex > #waypointList then
@@ -317,6 +415,11 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
 
             local waypoint = waypointList[currentIndex]
             CurrentWaypoint = waypoint
+            
+            -- Update visual for the new waypoint
+            if ShowVisuals then
+                UpdateFallbackVisualCurrent(waypoint.Position)
+            end
 
             -- If next-next action is Jump, wait until grounded first
             -- (prevents jump flag being reset by state change)
@@ -377,6 +480,11 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
         -- Cleanup
         if moveConn then moveConn:Disconnect() end
         CurrentlyPathing = false
+        
+        -- Clear all remaining visuals
+        if ShowVisuals then
+            ClearFallbackVisuals()
+        end
 
         if Options.OnPathComplete and finished then
             Options.OnPathComplete()
