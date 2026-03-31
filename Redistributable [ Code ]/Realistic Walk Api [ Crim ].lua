@@ -25,7 +25,6 @@ local CurrentlyPathing = false
 local CurrentPath = nil
 local CurrentWaypoint = nil
 local VisualFolder = nil
-local Pass = false
 
 -- Tween info for visual effects
 local TweenI = TweenInfo.new(1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
@@ -54,7 +53,7 @@ local function CreateVisualPoint(Position)
         VisualFolder = Instance.new("Folder", Workspace)
         VisualFolder.Name = "PathVisuals_WalkToSystem"
     end
-    
+
     local A = Instance.new("Part")
     local B = Instance.new("SelectionSphere")
     A.Anchored = true
@@ -76,7 +75,7 @@ local function UpdateVisualPoint(Point, Remove, Color)
         if Remove == true then
             TweenService:Create(Point, TweenI, {Color3 = Color3.new(0.454902, 0.454902, 0.454902)}):Play()
             TweenService:Create(Point, TweenI, {Transparency = 1}):Play()
-            wait(1)
+            task.wait(1)
             Point.Parent:Destroy()
         else
             TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
@@ -86,7 +85,7 @@ end
 
 local function ClearVisualPoints()
     if VisualFolder then
-        for i, v in pairs(VisualFolder:GetChildren()) do
+        for _, v in pairs(VisualFolder:GetChildren()) do
             if v:FindFirstChild("SelectionSphere") then
                 UpdateVisualPoint(v.SelectionSphere, true)
             else
@@ -103,39 +102,35 @@ end
 local function isPointInsidePart(part, point)
     local size = part.Size
     local position = part.Position
-    
+
     local minX = position.X - size.X / 2
     local maxX = position.X + size.X / 2
     local minY = position.Y - size.Y / 2
     local maxY = position.Y + size.Y / 2
     local minZ = position.Z - size.Z / 2
     local maxZ = position.Z + size.Z / 2
-    
-    if point.X > minX and point.X < maxX and 
-       point.Y > minY and point.Y < maxY and 
-       point.Z > minZ and point.Z < maxZ then
-        return true
-    end
-    return false
+
+    return point.X > minX and point.X < maxX
+        and point.Y > minY and point.Y < maxY
+        and point.Z > minZ and point.Z < maxZ
 end
 
 local function isPositionInsidePart(position)
     local params = OverlapParams.new()
     params.FilterType = Enum.RaycastFilterType.Whitelist
-    
-    -- Collect Map children excluding Doors and safes
+
+    -- Exclude Doors and BredMakurz from blocking waypoint checks
     local mapChildren = {}
     for _, child in pairs(Workspace.Map:GetChildren()) do
-        if child.Name ~= "Doors" or child.Name ~= "BredMakurz" then
+        if child.Name ~= "Doors" and child.Name ~= "BredMakurz" then
             table.insert(mapChildren, child)
         end
     end
     params.FilterDescendantsInstances = mapChildren
-    
+
     local parts = workspace:GetPartBoundsInRadius(position, 20, params)
-    
-    for i = 1, #parts do
-        local part = parts[i]
+
+    for _, part in pairs(parts) do
         if part:IsA("Part") and part.CanCollide == true and isPointInsidePart(part, position) then
             return true
         end
@@ -150,8 +145,10 @@ local function checkVisibility()
             raycastParams.FilterDescendantsInstances = {player.Character}
             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
             raycastParams.IgnoreWater = true
-            local result = workspace:Raycast(player.Character.Head.Position, 
-                (Character.PrimaryPart.Position - player.Character.Head.Position).Unit * 70)
+            local result = workspace:Raycast(
+                player.Character.Head.Position,
+                (Character.PrimaryPart.Position - player.Character.Head.Position).Unit * 70
+            )
             if result and result.Instance:IsDescendantOf(Character) then
                 return true
             end
@@ -161,7 +158,7 @@ local function checkVisibility()
 end
 
 ---------------------------------------------------------------------
--- UPDATE CHARACTER REFERENCE
+-- UPDATE CHARACTER REFERENCES
 ---------------------------------------------------------------------
 
 local function UpdateCharacterReferences()
@@ -177,126 +174,133 @@ end
 -- MAIN WALK FUNCTION
 ---------------------------------------------------------------------
 
--- Walk to a destination (CFrame, Vector3, or BasePart)
 function WalkToSystem.WalkTo(Destination, Options)
     Options = Options or {}
     local ShowVisuals = Options.ShowVisuals ~= false
     local AutoJump = Options.AutoJump ~= false
     local SkipInvalidWaypoints = Options.SkipInvalidWaypoints ~= false
     local AntiStuck = Options.AntiStuck ~= false
-    
-    -- Update character references
+
     if not UpdateCharacterReferences() then
         warn("[WalkToSystem] Character not found")
         return false
     end
-    
-    -- Get destination position
+
+    -- Resolve destination to Vector3
     local DestinationPosition
     if typeof(Destination) == "CFrame" then
         DestinationPosition = Destination.Position
     elseif typeof(Destination) == "Vector3" then
         DestinationPosition = Destination
-    elseif Destination:IsA("BasePart") then
+    elseif typeof(Destination) == "Instance" and Destination:IsA("BasePart") then
         DestinationPosition = Destination.Position
     else
         warn("[WalkToSystem] Invalid destination type")
         return false
     end
-    
-    -- Clear previous path visuals
+
     ClearVisualPoints()
-    
-    -- Create path
+
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
         AgentHeight = 4,
         AgentCanJump = true,
-        AgentCanClimb = true
+        AgentCanClimb = true,
     })
-    
-    local success, errorMessage = pcall(function()
+
+    local success = pcall(function()
         path:ComputeAsync(HumanoidRootPart.Position, DestinationPosition)
     end)
-    
+
     if not success or path.Status ~= Enum.PathStatus.Success then
         warn("[WalkToSystem] No path found to destination")
         return false
     end
-    
+
     CurrentPath = path
     CurrentlyPathing = true
-    
-    -- Create visual waypoints
+
+    local waypoints = CurrentPath:GetWaypoints()
+
     if ShowVisuals then
-        for i, v in pairs(CurrentPath:GetWaypoints()) do
+        for _, v in pairs(waypoints) do
             CreateVisualPoint(v.Position)
         end
     end
-    
-    local waypoints = CurrentPath:GetWaypoints()
+
     local TimesFailed = 0
     local SkipNext = false
-    
-    -- Anti-stuck loop
+
+    -- Anti-stuck loop: fires every 0.5s
+    -- Triggers on low velocity (distance check) OR TimesFailed >= 2 (timeout feed)
     if AntiStuck then
         task.spawn(function()
-            while task.wait(0.5) and CurrentlyPathing == true do
+            while task.wait(0.5) and CurrentlyPathing do
+
+                -- Teleport threshold: triggered by distance-stuck OR 20s timeout
                 if TimesFailed >= 2 then
                     repeat task.wait() until not checkVisibility()
-                    print("[WalkToSystem] Stuck, teleporting to next waypoint")
+                    print("[WalkToSystem] Anti-stuck: teleporting to waypoint")
                     Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
                     Humanoid:MoveTo(CurrentWaypoint.Position)
                     TimesFailed = 0
+                    continue
                 end
-                
-                if HumanoidRootPart and (HumanoidRootPart.Velocity).Magnitude < 0.07 then
+
+                if HumanoidRootPart and HumanoidRootPart.Velocity.Magnitude < 0.07 then
                     Humanoid:MoveTo(CurrentWaypoint.Position)
                     task.wait(0.2)
-                    if (HumanoidRootPart.Velocity).Magnitude < 0.07 then
+                    if HumanoidRootPart.Velocity.Magnitude < 0.07 then
                         local targetPosition = CurrentWaypoint.Position
                         local charPosition = HumanoidRootPart.Position
                         local dx = targetPosition.X - charPosition.X
                         local dz = targetPosition.Z - charPosition.Z
                         local distance = math.sqrt(dx * dx + dz * dz)
                         if distance < 3 and not checkVisibility() then
-                            print("[WalkToSystem] Stuck, teleporting to waypoint")
+                            print("[WalkToSystem] Anti-stuck: close but stuck, teleporting")
                             Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
                             Humanoid:MoveTo(CurrentWaypoint.Position)
                             TimesFailed = 0
                         else
-                            TimesFailed = TimesFailed + 1
+                            TimesFailed += 1
                             Humanoid.Jump = true
                             task.wait()
                             Humanoid:MoveTo(CurrentWaypoint.Position)
                         end
                     end
                 else
+                    -- Moving fine, reset counter
                     TimesFailed = 0
                 end
             end
         end)
     end
-    
+
     -- Walk through waypoints
     for i, v in pairs(waypoints) do
-        if not CurrentlyPathing then
-            break
+        if not CurrentlyPathing then break end
+
+        if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
+            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0.098, 1, 0))
         end
-        
-        if ShowVisuals and VisualFolder and VisualFolder[tostring(v.Position)] then
-            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0.0980392, 1, 0))
-        end
-        
+
         if not SkipNext then
             CurrentWaypoint = v
             Humanoid:MoveTo(v.Position)
-            
-            -- Wait to reach waypoint
-            repeat 
-                task.wait() 
+
+            -- Wait to reach waypoint with 20s timeout feeding into anti-stuck
+            local waypointTimer = 0
+            repeat
+                task.wait(0.1)
+                waypointTimer += 0.1
+                if waypointTimer >= 20 then
+                    -- Feed directly into anti-stuck: += 2 guarantees threshold hit next tick
+                    TimesFailed += 2
+                    print("[WalkToSystem] Waypoint timeout (20s), triggering anti-stuck")
+                    break
+                end
             until not CurrentlyPathing or (HumanoidRootPart.Position - v.Position).Magnitude < 3.8
-            
+
             -- Handle jump waypoints
             if AutoJump and waypoints[i + 1] and waypoints[i + 1].Action == Enum.PathWaypointAction.Jump then
                 task.spawn(function()
@@ -304,31 +308,30 @@ function WalkToSystem.WalkTo(Destination, Options)
                     Humanoid.Jump = true
                 end)
             end
-            
-            -- Check if next waypoint is inside a part (skip it)
+
+            -- Skip next waypoint if it's inside geometry
             if SkipInvalidWaypoints and waypoints[i + 1] and isPositionInsidePart(waypoints[i + 1].Position + Vector3.new(0, 2, 0)) then
                 SkipNext = true
             end
-            
-            -- Callback
+
             if Options.OnWaypointReached then
                 Options.OnWaypointReached(v, i)
             end
-        elseif SkipNext then
+        else
             SkipNext = false
         end
-        
-        if ShowVisuals and VisualFolder and VisualFolder[tostring(v.Position)] then
+
+        if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
             UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
         end
     end
-    
+
     CurrentlyPathing = false
-    
+
     if Options.OnPathComplete then
         Options.OnPathComplete()
     end
-    
+
     return true
 end
 
@@ -336,12 +339,10 @@ end
 -- WALK TO PREDEFINED LOCATION
 ---------------------------------------------------------------------
 
--- Walk to a named location
 function WalkToSystem.WalkToLocation(locationName, Options)
     local targetCFrame = Locations[locationName]
-    
+
     if not targetCFrame then
-        -- Try case-insensitive match
         for name, cframe in pairs(Locations) do
             if string.lower(name) == string.lower(locationName) then
                 targetCFrame = cframe
@@ -349,24 +350,23 @@ function WalkToSystem.WalkToLocation(locationName, Options)
             end
         end
     end
-    
+
     if not targetCFrame then
         local available = {}
-        for name, _ in pairs(Locations) do
+        for name in pairs(Locations) do
             table.insert(available, name)
         end
         warn("[WalkToSystem] Location not found: " .. locationName .. ". Available: " .. table.concat(available, ", "))
         return false
     end
-    
+
     return WalkToSystem.WalkTo(targetCFrame, Options)
 end
 
 ---------------------------------------------------------------------
--- HELPER FUNCTIONS
+-- PUBLIC API
 ---------------------------------------------------------------------
 
--- Cancel current movement
 function WalkToSystem.Cancel()
     CurrentlyPathing = false
     if Humanoid then
@@ -376,72 +376,57 @@ function WalkToSystem.Cancel()
     return true
 end
 
--- Check if currently moving
 function WalkToSystem.IsMoving()
     return CurrentlyPathing
 end
 
--- Get current waypoint (for UI)
 function WalkToSystem.GetCurrentWaypoint()
     return CurrentWaypoint
 end
 
--- Check if path exists to a destination
 function WalkToSystem.CanReach(Destination)
-    if not UpdateCharacterReferences() then
-        return false
-    end
-    
+    if not UpdateCharacterReferences() then return false end
+
     local DestPos
     if typeof(Destination) == "CFrame" then
         DestPos = Destination.Position
     elseif typeof(Destination) == "Vector3" then
         DestPos = Destination
-    elseif Destination:IsA("BasePart") then
+    elseif typeof(Destination) == "Instance" and Destination:IsA("BasePart") then
         DestPos = Destination.Position
     elseif type(Destination) == "string" then
         local locCFrame = Locations[Destination]
-        if locCFrame then
-            DestPos = locCFrame.Position
-        else
-            return false
-        end
+        if locCFrame then DestPos = locCFrame.Position else return false end
     else
         return false
     end
-    
+
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
         AgentHeight = 4,
         AgentCanJump = true,
-        AgentCanClimb = true
+        AgentCanClimb = true,
     })
-    
+
     local success = pcall(function()
         path:ComputeAsync(HumanoidRootPart.Position, DestPos)
     end)
-    
+
     return success and path.Status == Enum.PathStatus.Success
 end
 
--- Get all available location names
 function WalkToSystem.GetLocations()
     local locations = {}
-    for name, _ in pairs(Locations) do
+    for name in pairs(Locations) do
         table.insert(locations, name)
     end
     return locations
 end
 
--- Add a custom location
 function WalkToSystem.AddLocation(name, cframe)
     Locations[name] = cframe
     return true
 end
-
----------------------------------------------------------------------
--- CLEANUP
----------------------------------------------------------------------
 
 function WalkToSystem.Destroy()
     WalkToSystem.Cancel()
