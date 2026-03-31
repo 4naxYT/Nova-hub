@@ -22,6 +22,7 @@ local Humanoid = nil
 local HumanoidRootPart = nil
 
 -- State variables
+local DEFAULT_WAYPOINT_SPACING = 3 -- Can be adjusted globally
 local CurrentlyPathing = false
 local CurrentPath = nil
 local CurrentWaypoint = nil
@@ -345,6 +346,7 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
     -- Event-driven waypoint traversal using MoveToFinished,
     -- matching the 2017 Pather:OnPointReached() logic exactly.
     -- Includes jump-action handling and freefall wait before jump waypoints.
+    -- Event-driven waypoint traversal with 20-second timeout
     local function WalkWaypoints(waypointList)
         if #waypointList == 0 then return false end
 
@@ -353,6 +355,8 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
         local finished = false
         local failed = false
         local moveConn = nil
+        local WaypointStartTime = tick()
+        local WaypointTimerThread = nil
 
         local TimesFailed = 0
 
@@ -360,6 +364,22 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
         if ShowVisuals and waypointList[currentIndex] then
             UpdateFallbackVisualCurrent(waypointList[currentIndex].Position)
         end
+        
+        -- Timer thread to check for 20-second timeout
+        WaypointTimerThread = task.spawn(function()
+            while CurrentlyPathing and not finished do
+                task.wait(1)
+                if WaypointStartTime and (tick() - WaypointStartTime) > 20 then
+                    print("[WalkToSystem] Fallback: Waypoint timeout (20s) - teleporting")
+                    if CurrentWaypoint then
+                        Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                        Humanoid:MoveTo(CurrentWaypoint.Position)
+                        WaypointStartTime = tick() -- Reset timer
+                        TimesFailed = 0
+                    end
+                end
+            end
+        end)
 
         -- Anti-stuck: same logic as primary path
         local antiStuckThread = task.spawn(function()
@@ -370,8 +390,9 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
                     if CurrentWaypoint then
                         Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
                         Humanoid:MoveTo(CurrentWaypoint.Position)
+                        WaypointStartTime = tick()
+                        TimesFailed = 0
                     end
-                    TimesFailed = 0
                     continue
                 end
                 if HumanoidRootPart and HumanoidRootPart.Velocity.Magnitude < 0.07 then
@@ -385,6 +406,7 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
                         if xzDist < 3 and not checkVisibility() then
                             Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
                             Humanoid:MoveTo(CurrentWaypoint.Position)
+                            WaypointStartTime = tick()
                             TimesFailed = 0
                         else
                             TimesFailed += 1
@@ -415,6 +437,7 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
 
             local waypoint = waypointList[currentIndex]
             CurrentWaypoint = waypoint
+            WaypointStartTime = tick() -- Reset timer for new waypoint
             
             -- Update visual for the new waypoint
             if ShowVisuals then
@@ -471,14 +494,12 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
         repeat
             task.wait(0.1)
             totalTimer += 0.1
-
-            -- 20s per-waypoint timeout feeds into anti-stuck via TimesFailed
-            -- (handled by MoveToFinished false branch above for individual waypoints)
-
         until finished or not CurrentlyPathing or totalTimer >= maxTime
 
         -- Cleanup
         if moveConn then moveConn:Disconnect() end
+        if WaypointTimerThread then task.cancel(WaypointTimerThread) end
+        if antiStuckThread then task.cancel(antiStuckThread) end
         CurrentlyPathing = false
         
         -- Clear all remaining visuals
@@ -513,7 +534,50 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
 end
 
 ---------------------------------------------------------------------
--- MAIN WALK FUNCTION
+-- ADD INTERMEDIATE WAYPOINTS FOR SMOOTHER NAVIGATION
+---------------------------------------------------------------------
+
+local function AddIntermediateWaypoints(waypoints, spacing)
+    if #waypoints < 2 then return waypoints end
+    
+    local newWaypoints = {}
+    
+    for i = 1, #waypoints - 1 do
+        local current = waypoints[i]
+        local nextWP = waypoints[i + 1]
+        
+        -- Always add the current waypoint
+        table.insert(newWaypoints, current)
+        
+        -- Calculate distance between waypoints
+        local distance = (nextWP.Position - current.Position).Magnitude
+        
+        -- If distance is greater than spacing, add intermediate points
+        if distance > spacing then
+            local steps = math.floor(distance / spacing)
+            local stepVector = (nextWP.Position - current.Position) / steps
+            
+            for step = 1, steps - 1 do
+                local intermediatePos = current.Position + (stepVector * step)
+                -- Create a new waypoint with same action as the current
+                local intermediateWP = {
+                    Position = intermediatePos,
+                    Action = current.Action
+                }
+                table.insert(newWaypoints, intermediateWP)
+            end
+        end
+    end
+    
+    -- Add the final waypoint
+    table.insert(newWaypoints, waypoints[#waypoints])
+    
+    print(string.format("[WalkToSystem] Added intermediate waypoints: %d -> %d", #waypoints, #newWaypoints))
+    return newWaypoints
+end
+
+---------------------------------------------------------------------
+-- MAIN WALK FUNCTION - ENHANCED WITH FREQUENT WAYPOINTS
 ---------------------------------------------------------------------
 
 function WalkToSystem.WalkTo(Destination, Options)
@@ -522,6 +586,7 @@ function WalkToSystem.WalkTo(Destination, Options)
     local AutoJump = Options.AutoJump ~= false
     local SkipInvalidWaypoints = Options.SkipInvalidWaypoints ~= false
     local AntiStuck = Options.AntiStuck ~= false
+    local WaypointFrequency = Options.WaypointFrequency or 3 -- Add waypoints every X studs (default 3)
 
     if not UpdateCharacterReferences() then
         warn("[WalkToSystem] Character not found")
@@ -547,6 +612,7 @@ function WalkToSystem.WalkTo(Destination, Options)
         AgentHeight = 4,
         AgentCanJump = true,
         AgentCanClimb = true,
+        WaypointSpacing = WaypointFrequency, -- Control waypoint density
     })
 
     local success = pcall(function()
@@ -556,6 +622,8 @@ function WalkToSystem.WalkTo(Destination, Options)
     -- Primary path failed: hand off to native fallback
     if not success or path.Status ~= Enum.PathStatus.Success then
         warn("[WalkToSystem] Primary path failed — handing off to native fallback")
+        -- Pass WaypointFrequency to fallback as well
+        Options.WaypointFrequency = WaypointFrequency
         return NativeFallbackWalkTo(DestinationPosition, Options)
     end
 
@@ -563,6 +631,11 @@ function WalkToSystem.WalkTo(Destination, Options)
     CurrentlyPathing = true
 
     local waypoints = CurrentPath:GetWaypoints()
+    
+    -- OPTIONAL: Add intermediate waypoints for smoother navigation
+    if WaypointFrequency < 10 then
+        waypoints = AddIntermediateWaypoints(waypoints, WaypointFrequency)
+    end
 
     if ShowVisuals then
         for _, v in pairs(waypoints) do
@@ -572,20 +645,42 @@ function WalkToSystem.WalkTo(Destination, Options)
 
     local TimesFailed = 0
     local SkipNext = false
+    local WaypointStartTime = nil -- Track when we started trying to reach current waypoint
+    local AntiStuckThread = nil
 
+    -- Enhanced anti-stuck with 20-second timeout per waypoint
     if AntiStuck then
-        task.spawn(function()
+        AntiStuckThread = task.spawn(function()
             while task.wait(0.5) and CurrentlyPathing do
+                -- Check if we've been trying to reach the current waypoint for >20 seconds
+                if WaypointStartTime and (tick() - WaypointStartTime) > 20 then
+                    print("[WalkToSystem] Waypoint timeout (20s) - teleporting to next waypoint")
+                    -- Teleport directly to current waypoint
+                    if CurrentWaypoint then
+                        Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                        Humanoid:MoveTo(CurrentWaypoint.Position)
+                        WaypointStartTime = tick() -- Reset timer after teleport
+                        TimesFailed = 0
+                    end
+                    continue
+                end
+                
                 if TimesFailed >= 2 then
                     repeat task.wait() until not checkVisibility()
                     print("[WalkToSystem] Anti-stuck: teleporting to waypoint")
-                    Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
-                    Humanoid:MoveTo(CurrentWaypoint.Position)
-                    TimesFailed = 0
+                    if CurrentWaypoint then
+                        Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
+                        Humanoid:MoveTo(CurrentWaypoint.Position)
+                        WaypointStartTime = tick() -- Reset timer after teleport
+                        TimesFailed = 0
+                    end
                     continue
                 end
+                
                 if HumanoidRootPart and HumanoidRootPart.Velocity.Magnitude < 0.07 then
-                    Humanoid:MoveTo(CurrentWaypoint.Position)
+                    if CurrentWaypoint then 
+                        Humanoid:MoveTo(CurrentWaypoint.Position) 
+                    end
                     task.wait(0.2)
                     if HumanoidRootPart.Velocity.Magnitude < 0.07 then
                         local targetPosition = CurrentWaypoint.Position
@@ -597,6 +692,7 @@ function WalkToSystem.WalkTo(Destination, Options)
                             print("[WalkToSystem] Anti-stuck: close but stuck, teleporting")
                             Character:PivotTo(CFrame.new(CurrentWaypoint.Position + Vector3.new(0, 4, 0)))
                             Humanoid:MoveTo(CurrentWaypoint.Position)
+                            WaypointStartTime = tick() -- Reset timer after teleport
                             TimesFailed = 0
                         else
                             TimesFailed += 1
@@ -622,17 +718,38 @@ function WalkToSystem.WalkTo(Destination, Options)
         if not SkipNext then
             CurrentWaypoint = v
             Humanoid:MoveTo(v.Position)
+            WaypointStartTime = tick() -- Start timing this waypoint
+            WaypointStartTime = tick() -- Start timing this waypoint
 
             local waypointTimer = 0
+            local reachedWaypoint = false
+            
+            -- Wait until we reach the waypoint or timeout
             repeat
                 task.wait(0.1)
                 waypointTimer += 0.1
-                if waypointTimer >= 20 then
-                    TimesFailed += 2
-                    print("[WalkToSystem] Waypoint timeout (20s), triggering anti-stuck")
+                
+                -- Check if we've reached the waypoint
+                if (HumanoidRootPart.Position - v.Position).Magnitude < 3.8 then
+                    reachedWaypoint = true
                     break
                 end
-            until not CurrentlyPathing or (HumanoidRootPart.Position - v.Position).Magnitude < 3.8
+                
+                -- If we exceed 20 seconds, break out to trigger teleport
+                if waypointTimer >= 20 then
+                    print("[WalkToSystem] Waypoint timeout (20s), triggering teleport")
+                    break
+                end
+                
+            until not CurrentlyPathing
+            
+            -- If we didn't reach the waypoint after 20 seconds, teleport
+            if not reachedWaypoint and CurrentlyPathing then
+                print("[WalkToSystem] Teleporting to waypoint due to timeout")
+                Character:PivotTo(CFrame.new(v.Position + Vector3.new(0, 4, 0)))
+                Humanoid:MoveTo(v.Position)
+                WaypointStartTime = tick() -- Reset timer
+            end
 
             if AutoJump and waypoints[i + 1] and waypoints[i + 1].Action == Enum.PathWaypointAction.Jump then
                 task.spawn(function()
@@ -658,6 +775,10 @@ function WalkToSystem.WalkTo(Destination, Options)
     end
 
     CurrentlyPathing = false
+    
+    if AntiStuckThread then
+        task.cancel(AntiStuckThread)
+    end
 
     if Options.OnPathComplete then
         Options.OnPathComplete()
@@ -692,6 +813,70 @@ end
 ---------------------------------------------------------------------
 -- PUBLIC API
 ---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+-- CHECK IF DESTINATION IS REACHABLE WITH DETAILED STATUS
+---------------------------------------------------------------------
+
+function WalkToSystem.CanReachWithDetails(Destination, Options)
+    Options = Options or {}
+    
+    if not UpdateCharacterReferences() then
+        return false, "Character not ready"
+    end
+    
+    local DestPos
+    if typeof(Destination) == "CFrame" then
+        DestPos = Destination.Position
+    elseif typeof(Destination) == "Vector3" then
+        DestPos = Destination
+    elseif typeof(Destination) == "Instance" and Destination:IsA("BasePart") then
+        DestPos = Destination.Position
+    elseif type(Destination) == "string" then
+        local lc = Locations[Destination]
+        if lc then 
+            DestPos = lc.Position 
+        else 
+            return false, "Location not found"
+        end
+    else
+        return false, "Invalid destination type"
+    end
+    
+    local path = PathfindingService:CreatePath({
+        AgentRadius = Options.AgentRadius or 2,
+        AgentHeight = Options.AgentHeight or 4,
+        AgentCanJump = Options.AgentCanJump ~= false,
+        AgentCanClimb = Options.AgentCanClimb ~= false,
+    })
+    
+    local ok = pcall(function() 
+        path:ComputeAsync(HumanoidRootPart.Position, DestPos) 
+    end)
+    
+    if not ok then
+        return false, "Path computation error"
+    end
+    
+    if path.Status == Enum.PathStatus.Success then
+        local waypoints = path:GetWaypoints()
+        return true, "Path found", waypoints
+    elseif path.Status == Enum.PathStatus.NoPath then
+        return false, "No path found"
+    elseif path.Status == Enum.PathStatus.ClimbingNotSupported then
+        return false, "Climbing not supported"
+    elseif path.Status == Enum.PathStatus.JumpNotSupported then
+        return false, "Jump not supported"
+    else
+        return false, "Unknown error"
+    end
+end
+
+-- Enhanced WalkTo that returns success/failure
+function WalkToSystem.WalkToWithResult(Destination, Options)
+    local success = WalkToSystem.WalkTo(Destination, Options)
+    return success
+end
 
 function WalkToSystem.Cancel()
     CurrentlyPathing = false
