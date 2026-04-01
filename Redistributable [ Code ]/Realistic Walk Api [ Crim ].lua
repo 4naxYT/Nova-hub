@@ -50,6 +50,9 @@ local Locations = {
 -- VISUAL WAYPOINTS - FIXED
 ---------------------------------------------------------------------
 
+-- Store all active visual markers
+local ActiveVisualMarkers = {}
+
 local function CreateVisualPoint(Position)
     if not VisualFolder then
         VisualFolder = Instance.new("Folder", Workspace)
@@ -60,66 +63,132 @@ local function CreateVisualPoint(Position)
     local B = Instance.new("SelectionSphere")
     A.Anchored = true
     A.CanCollide = false
-    A.Size = Vector3.new(0.5, 0.5, 0.5) -- Increased size for visibility
-    A.Position = Position + Vector3.new(0, 3, 0) -- Raised height for better visibility
-    A.Transparency = 0.5 -- Slightly transparent to see through
+    A.Size = Vector3.new(1, 1, 1) -- Larger size
+    A.Position = Position + Vector3.new(0, 3, 0)
+    A.Transparency = 0.3
     A.BrickColor = BrickColor.new("Bright red")
     A.Material = Enum.Material.Neon
     A.Parent = VisualFolder
-    A.Name = tostring(Position)
+    A.Name = tostring(Position) .. "_" .. tostring(tick())
     
-    B.Transparency = 0.3
+    B.Transparency = 0
     B.Parent = A
     B.Adornee = A
-    B.Color3 = Color3.new(1, 0, 0.0156863)
+    B.Color3 = Color3.new(1, 0, 0)
     
-    -- Animate the sphere
-    TweenService:Create(B, TweenI, {Transparency = 0}):Play()
-    
-    -- Add a small cylinder beam for better visibility
+    -- Add a beam for visibility
     local beam = Instance.new("Part")
     beam.Anchored = true
     beam.CanCollide = false
-    beam.Size = Vector3.new(0.2, 5, 0.2)
-    beam.Position = Position + Vector3.new(0, 1, 0)
-    beam.Transparency = 0.3
+    beam.Size = Vector3.new(0.3, 6, 0.3)
+    beam.Position = Position + Vector3.new(0, 1.5, 0)
+    beam.Transparency = 0.2
     beam.BrickColor = BrickColor.new("Bright red")
     beam.Material = Enum.Material.Neon
     beam.Parent = A
     
-    return A -- Return the created part for tracking
+    -- Store marker info
+    local markerInfo = {
+        Part = A,
+        Sphere = B,
+        Beam = beam,
+        Position = Position,
+        Created = tick()
+    }
+    table.insert(ActiveVisualMarkers, markerInfo)
+    
+    return A
 end
 
-local function UpdateVisualPoint(Point, Remove, Color)
-    if not Point or not Point.Parent then return end
+local function UpdateVisualPoint(markerPart, IsComplete, Color)
+    if not markerPart or not markerPart.Parent then return end
+    
+    local sphere = markerPart:FindFirstChild("SelectionSphere")
+    local beam = markerPart:FindFirstChildWhichIsA("Part")
     
     task.spawn(function()
-        if Remove == true then
-            -- Fade out and destroy, but don't destroy too quickly
-            TweenService:Create(Point, TweenI, {Color3 = Color3.new(0.454902, 0.454902, 0.454902)}):Play()
-            TweenService:Create(Point, TweenI, {Transparency = 1}):Play()
-            task.wait(1.5) -- Wait longer before destroying
-            if Point and Point.Parent then
-                Point.Parent:Destroy()
+        if IsComplete then
+            -- Change to green when completed
+            if sphere then
+                TweenService:Create(sphere, TweenInfo.new(0.5), {Color3 = Color3.new(0, 1, 0)}):Play()
+            end
+            if beam then
+                TweenService:Create(beam, TweenInfo.new(0.5), {BrickColor = BrickColor.new("Bright green")}):Play()
+            end
+            
+            -- Fade out after 2 seconds
+            task.wait(2)
+            if markerPart and markerPart.Parent then
+                if sphere then
+                    TweenService:Create(sphere, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                end
+                if beam then
+                    TweenService:Create(beam, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                end
+                TweenService:Create(markerPart, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                task.wait(0.5)
+                markerPart:Destroy()
+            end
+            
+            -- Remove from active markers
+            for i, marker in pairs(ActiveVisualMarkers) do
+                if marker.Part == markerPart then
+                    table.remove(ActiveVisualMarkers, i)
+                    break
+                end
             end
         else
-            if Color then
-                TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
+            -- Highlight current waypoint
+            if sphere then
+                TweenService:Create(sphere, TweenInfo.new(0.3), {Color3 = Color or Color3.new(0, 1, 0)}):Play()
             end
-            -- Also make it more visible when current
-            TweenService:Create(Point, TweenI, {Transparency = 0}):Play()
+            if beam then
+                TweenService:Create(beam, TweenInfo.new(0.3), {BrickColor = BrickColor.new("Bright green")}):Play()
+            end
+            TweenService:Create(markerPart, TweenInfo.new(0.3), {Transparency = 0}):Play()
         end
     end)
 end
 
 local function ClearVisualPoints()
-    if VisualFolder then
-        -- Destroy all children but keep the folder
-        for _, v in pairs(VisualFolder:GetChildren()) do
-            v:Destroy()
+    -- Destroy all visual markers with fade out
+    for _, marker in pairs(ActiveVisualMarkers) do
+        if marker.Part and marker.Part.Parent then
+            local sphere = marker.Part:FindFirstChild("SelectionSphere")
+            local beam = marker.Part:FindFirstChildWhichIsA("Part")
+            
+            if sphere then
+                TweenService:Create(sphere, TweenInfo.new(0.5), {Transparency = 1}):Play()
+            end
+            if beam then
+                TweenService:Create(beam, TweenInfo.new(0.5), {Transparency = 1}):Play()
+            end
+            TweenService:Create(marker.Part, TweenInfo.new(0.5), {Transparency = 1}):Play()
+            task.wait(0.1)
+            marker.Part:Destroy()
         end
     end
-    -- Don't set VisualFolder to nil instead i think we shd reuse it
+    ActiveVisualMarkers = {}
+    
+    if VisualFolder then
+        VisualFolder:Destroy()
+        VisualFolder = nil
+    end
+end
+
+-- New function to only clear completed visuals (for fallback)
+local function ClearCompletedVisuals()
+    for i = #ActiveVisualMarkers, 1, -1 do
+        local marker = ActiveVisualMarkers[i]
+        if marker and marker.Part and marker.Part.Parent then
+            -- Check if this marker is old (more than 30 seconds)
+            if tick() - marker.Created > 30 then
+                if marker.Part:FindFirstChild("SelectionSphere") then
+                    UpdateVisualPoint(marker.Part, true)
+                end
+            end
+        end
+    end
 end
 
 ---------------------------------------------------------------------
@@ -737,16 +806,13 @@ function WalkToSystem.WalkTo(Destination, Options)
     for i, v in pairs(waypoints) do
         if not CurrentlyPathing then break end
 
-        -- In the main loop, change this section:
-        if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-            -- Change to green when reached, but don't remove immediately
-            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0, 1, 0))
-            -- Schedule removal after delay
-            task.delay(3, function()
-                if VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-                    UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
-                end
-            end)
+        -- Find the visual marker for this waypoint
+        local visualMarker = nil
+        for _, marker in pairs(ActiveVisualMarkers) do
+            if (marker.Position - v.Position).Magnitude < 5 then
+                visualMarker = marker.Part
+                break
+            end
         end
 
         if not SkipNext then
@@ -754,21 +820,23 @@ function WalkToSystem.WalkTo(Destination, Options)
             Humanoid:MoveTo(v.Position)
             WaypointStartTime = tick()
 
+            -- Highlight current waypoint
+            if visualMarker then
+                UpdateVisualPoint(visualMarker, false, Color3.new(0, 1, 0))
+            end
+
             local waypointTimer = 0
             local reachedWaypoint = false
             
-            -- Wait until we reach the waypoint or timeout
             repeat
                 task.wait(0.1)
                 waypointTimer += 0.1
                 
-                -- Check if we've reached the waypoint
                 if (HumanoidRootPart.Position - v.Position).Magnitude < 3.8 then
                     reachedWaypoint = true
                     break
                 end
                 
-                -- If we exceed 20 seconds, break out to trigger teleport
                 if waypointTimer >= 20 then
                     print("[WalkToSystem] Waypoint timeout (20s), triggering teleport")
                     break
@@ -776,12 +844,16 @@ function WalkToSystem.WalkTo(Destination, Options)
                 
             until not CurrentlyPathing
             
-            -- If we didn't reach the waypoint after 20 seconds, teleport
+            -- Mark waypoint as complete when reached
+            if reachedWaypoint and visualMarker then
+                UpdateVisualPoint(visualMarker, true) -- This will fade it out after 2 seconds
+            end
+            
             if not reachedWaypoint and CurrentlyPathing then
                 print("[WalkToSystem] Teleporting to waypoint due to timeout")
                 Character:PivotTo(CFrame.new(v.Position + Vector3.new(0, 4, 0)))
                 Humanoid:MoveTo(v.Position)
-                WaypointStartTime = tick() -- Reset timer
+                WaypointStartTime = tick()
             end
 
             if AutoJump and waypoints[i + 1] and waypoints[i + 1].Action == Enum.PathWaypointAction.Jump then
@@ -820,6 +892,9 @@ function WalkToSystem.WalkTo(Destination, Options)
     if AntiStuckThread then
         task.cancel(AntiStuckThread)
     end
+
+    -- Optionally, clear old visuals (older than 30 seconds) but keep new ones
+    ClearCompletedVisuals()
 
     if Options.OnPathComplete then
         Options.OnPathComplete()
