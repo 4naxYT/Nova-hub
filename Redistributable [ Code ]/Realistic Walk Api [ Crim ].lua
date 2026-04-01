@@ -56,14 +56,14 @@ local ActiveVisualMarkers = {}
 local function CreateVisualPoint(Position)
     if not VisualFolder then
         VisualFolder = Instance.new("Folder", Workspace)
-        VisualFolder.Name = "PathVisuals_WalkToSystem"
+        VisualFolder.Name = "Pathfinding API - Waypoint Visuals"
     end
     
     local A = Instance.new("Part")
     local B = Instance.new("SelectionSphere")
     A.Anchored = true
     A.CanCollide = false
-    A.Size = Vector3.new(1, 1, 1) -- Larger size
+    A.Size = Vector3.new(0.8, 0.8, 0.8) -- Larger size
     A.Position = Position + Vector3.new(0, 3, 0)
     A.Transparency = 0.3
     A.BrickColor = BrickColor.new("Bright red")
@@ -82,7 +82,7 @@ local function CreateVisualPoint(Position)
     beam.CanCollide = false
     beam.Size = Vector3.new(0.3, 6, 0.3)
     beam.Position = Position + Vector3.new(0, 1.5, 0)
-    beam.Transparency = 0.2
+    beam.Transparency = 0.8
     beam.BrickColor = BrickColor.new("Bright red")
     beam.Material = Enum.Material.Neon
     beam.Parent = A
@@ -151,25 +151,26 @@ local function UpdateVisualPoint(markerPart, IsComplete, Color)
 end
 
 local function ClearVisualPoints()
-    -- Destroy all visual markers with fade out
     for _, marker in pairs(ActiveVisualMarkers) do
         if marker.Part and marker.Part.Parent then
             local sphere = marker.Part:FindFirstChild("SelectionSphere")
             local beam = marker.Part:FindFirstChildWhichIsA("Part")
-            
-            if sphere then
-                TweenService:Create(sphere, TweenInfo.new(0.5), {Transparency = 1}):Play()
-            end
-            if beam then
-                TweenService:Create(beam, TweenInfo.new(0.5), {Transparency = 1}):Play()
-            end
-            TweenService:Create(marker.Part, TweenInfo.new(0.5), {Transparency = 1}):Play()
-            task.wait(0.1)
-            marker.Part:Destroy()
+            task.spawn(function()  -- spawn so no yielding in the main loop
+                if sphere then
+                    TweenService:Create(sphere, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                end
+                if beam then
+                    TweenService:Create(beam, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                end
+                TweenService:Create(marker.Part, TweenInfo.new(0.5), {Transparency = 1}):Play()
+                task.wait(0.5)
+                if marker.Part and marker.Part.Parent then
+                    marker.Part:Destroy()
+                end
+            end)
         end
     end
     ActiveVisualMarkers = {}
-    
 end
 
 -- New function to only clear completed visuals (for fallback)
@@ -693,9 +694,7 @@ function WalkToSystem.WalkTo(Destination, Options)
     end
 
     -- Only clear if we're starting a new path (not if already pathing)
-    if not CurrentlyPathing then
-        ClearVisualPoints()
-    end
+    ClearVisualPoints()
 
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
@@ -870,16 +869,8 @@ function WalkToSystem.WalkTo(Destination, Options)
             SkipNext = false
         end
 
-        -- In the main loop, change this section:
-        if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-            -- Change to green when reached, but don't remove immediately
-            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0, 1, 0))
-            -- Schedule removal after delay
-            task.delay(3, function()
-                if VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-                    UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
-                end
-            end)
+        if ShowVisuals and visualMarker then
+            UpdateVisualPoint(visualMarker, true)
         end
     end
 
