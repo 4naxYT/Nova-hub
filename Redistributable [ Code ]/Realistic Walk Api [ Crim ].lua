@@ -170,10 +170,6 @@ local function ClearVisualPoints()
     end
     ActiveVisualMarkers = {}
     
-    if VisualFolder then
-        VisualFolder:Destroy()
-        VisualFolder = nil
-    end
 end
 
 -- New function to only clear completed visuals (for fallback)
