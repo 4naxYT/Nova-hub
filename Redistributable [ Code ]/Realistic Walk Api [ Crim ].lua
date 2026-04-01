@@ -95,9 +95,10 @@ local function UpdateVisualPoint(Point, Remove, Color)
     
     task.spawn(function()
         if Remove == true then
+            -- Fade out and destroy, but don't destroy too quickly
             TweenService:Create(Point, TweenI, {Color3 = Color3.new(0.454902, 0.454902, 0.454902)}):Play()
             TweenService:Create(Point, TweenI, {Transparency = 1}):Play()
-            task.wait(1)
+            task.wait(1.5) -- Wait longer before destroying
             if Point and Point.Parent then
                 Point.Parent:Destroy()
             end
@@ -105,18 +106,20 @@ local function UpdateVisualPoint(Point, Remove, Color)
             if Color then
                 TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
             end
+            -- Also make it more visible when current
+            TweenService:Create(Point, TweenI, {Transparency = 0}):Play()
         end
     end)
 end
 
 local function ClearVisualPoints()
     if VisualFolder then
-        -- Destroy all children immediately
+        -- Destroy all children but keep the folder
         for _, v in pairs(VisualFolder:GetChildren()) do
             v:Destroy()
         end
     end
-    VisualFolder = nil -- Reset folder
+    -- Don't set VisualFolder to nil instead i think we shd reuse it
 end
 
 ---------------------------------------------------------------------
@@ -202,7 +205,11 @@ local function NativeFallbackWalkTo(DestinationPosition, Options)
     local function ClearFallbackVisuals()
         for _, marker in pairs(VisualMarkers) do
             if marker and marker.Parent then
-                UpdateVisualPoint(marker.SelectionSphere, true)
+                -- Don't destroy immediately, fade out
+                local sphere = marker:FindFirstChild("SelectionSphere")
+                if sphere then
+                    UpdateVisualPoint(sphere, true)
+                end
             end
         end
         VisualMarkers = {}
@@ -601,7 +608,7 @@ function WalkToSystem.WalkTo(Destination, Options)
     local AutoJump = Options.AutoJump ~= false
     local SkipInvalidWaypoints = Options.SkipInvalidWaypoints ~= false
     local AntiStuck = Options.AntiStuck ~= false
-    local WaypointFrequency = Options.WaypointFrequency or 3 -- Add waypoints every X studs (default 3)
+    local WaypointFrequency = Options.WaypointFrequency or 3
 
     if not UpdateCharacterReferences() then
         warn("[WalkToSystem] Character not found")
@@ -620,7 +627,10 @@ function WalkToSystem.WalkTo(Destination, Options)
         return false
     end
 
-    ClearVisualPoints()
+    -- Only clear if we're starting a new path (not if already pathing)
+    if not CurrentlyPathing then
+        ClearVisualPoints()
+    end
 
     local path = PathfindingService:CreatePath({
         AgentRadius = 2,
@@ -727,8 +737,16 @@ function WalkToSystem.WalkTo(Destination, Options)
     for i, v in pairs(waypoints) do
         if not CurrentlyPathing then break end
 
+        -- In the main loop, change this section:
         if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0.098, 1, 0))
+            -- Change to green when reached, but don't remove immediately
+            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0, 1, 0))
+            -- Schedule removal after delay
+            task.delay(3, function()
+                if VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
+                    UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
+                end
+            end)
         end
 
         if not SkipNext then
@@ -784,8 +802,16 @@ function WalkToSystem.WalkTo(Destination, Options)
             SkipNext = false
         end
 
+        -- In the main loop, change this section:
         if ShowVisuals and VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
-            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
+            -- Change to green when reached, but don't remove immediately
+            UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, false, Color3.new(0, 1, 0))
+            -- Schedule removal after delay
+            task.delay(3, function()
+                if VisualFolder and VisualFolder:FindFirstChild(tostring(v.Position)) then
+                    UpdateVisualPoint(VisualFolder[tostring(v.Position)].SelectionSphere, true)
+                end
+            end)
         end
     end
 
