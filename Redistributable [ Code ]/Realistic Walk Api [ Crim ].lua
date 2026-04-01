@@ -65,13 +65,13 @@ local function CreateVisualPoint(Position)
     A.CanCollide = false
     A.Size = Vector3.new(0.8, 0.8, 0.8) -- Larger size
     A.Position = Position + Vector3.new(0, 3, 0)
-    A.Transparency = 0.3
+    A.Transparency = 1
     A.BrickColor = BrickColor.new("Bright red")
     A.Material = Enum.Material.Neon
     A.Parent = VisualFolder
     A.Name = tostring(Position) .. "_" .. tostring(tick())
     
-    B.Transparency = 0
+    B.Transparency = 0.2
     B.Parent = A
     B.Adornee = A
     B.Color3 = Color3.new(1, 0, 0)
@@ -103,30 +103,33 @@ end
 local function UpdateVisualPoint(markerPart, IsComplete, Color)
     if not markerPart or not markerPart.Parent then return end
     
-    local sphere = markerPart:FindFirstChild("SelectionSphere")
+    local sphere = markerPart:FindFirstChildOfClass("SelectionSphere")
     local beam = markerPart:FindFirstChildWhichIsA("Part")
     
     task.spawn(function()
         if IsComplete then
-            -- Change to green when completed
+            -- Flash green first
             if sphere then
-                TweenService:Create(sphere, TweenInfo.new(0.5), {Color3 = Color3.new(0, 1, 0)}):Play()
+                TweenService:Create(sphere, TweenInfo.new(0.3), {Color3 = Color3.new(0, 1, 0)}):Play()
             end
             if beam then
-                TweenService:Create(beam, TweenInfo.new(0.5), {BrickColor = BrickColor.new("Bright green")}):Play()
+                TweenService:Create(beam, TweenInfo.new(0.3), {Transparency = 0.3}):Play()
             end
             
-            -- Fade out after 2 seconds
-            task.wait(2)
+            task.wait(2) -- visible for 2 seconds after completion
+            
+            if not markerPart or not markerPart.Parent then return end
+            
+            -- Fade out sphere and beam
+            if sphere then
+                TweenService:Create(sphere, TweenInfo.new(0.8), {Transparency = 1}):Play()
+            end
+            if beam then
+                TweenService:Create(beam, TweenInfo.new(0.8), {Transparency = 1}):Play()
+            end
+            
+            task.wait(0.8)
             if markerPart and markerPart.Parent then
-                if sphere then
-                    TweenService:Create(sphere, TweenInfo.new(0.5), {Transparency = 1}):Play()
-                end
-                if beam then
-                    TweenService:Create(beam, TweenInfo.new(0.5), {Transparency = 1}):Play()
-                end
-                TweenService:Create(markerPart, TweenInfo.new(0.5), {Transparency = 1}):Play()
-                task.wait(0.5)
                 markerPart:Destroy()
             end
             
@@ -138,14 +141,16 @@ local function UpdateVisualPoint(markerPart, IsComplete, Color)
                 end
             end
         else
-            -- Highlight current waypoint
+            -- Highlight as current waypoint (green)
             if sphere then
-                TweenService:Create(sphere, TweenInfo.new(0.3), {Color3 = Color or Color3.new(0, 1, 0)}):Play()
+                TweenService:Create(sphere, TweenInfo.new(0.3), {
+                    Color3 = Color or Color3.new(0, 1, 0),
+                    Transparency = 0
+                }):Play()
             end
             if beam then
-                TweenService:Create(beam, TweenInfo.new(0.3), {BrickColor = BrickColor.new("Bright green")}):Play()
+                TweenService:Create(beam, TweenInfo.new(0.3), {Transparency = 0.3}):Play()
             end
-            TweenService:Create(markerPart, TweenInfo.new(0.3), {Transparency = 0}):Play()
         end
     end)
 end
