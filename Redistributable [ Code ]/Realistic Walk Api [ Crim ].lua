@@ -815,9 +815,6 @@ function WalkToSystem.WalkTo(Destination, Options)
             WaypointStartTime = tick()
 
             -- Highlight current waypoint
-            if visualMarker then
-                UpdateVisualPoint(visualMarker, false, Color3.new(0, 1, 0))
-            end
 
             local waypointTimer = 0
             local reachedWaypoint = false
