@@ -47,7 +47,7 @@ local Locations = {
 }
 
 ---------------------------------------------------------------------
--- VISUAL WAYPOINTS
+-- VISUAL WAYPOINTS - FIXED
 ---------------------------------------------------------------------
 
 local function CreateVisualPoint(Position)
@@ -55,45 +55,68 @@ local function CreateVisualPoint(Position)
         VisualFolder = Instance.new("Folder", Workspace)
         VisualFolder.Name = "PathVisuals_WalkToSystem"
     end
+    
     local A = Instance.new("Part")
     local B = Instance.new("SelectionSphere")
     A.Anchored = true
     A.CanCollide = false
-    A.Size = Vector3.new(0.001, 0.001, 0.001)
-    A.Position = Position + Vector3.new(0, 2, 0)
-    A.Transparency = 1
+    A.Size = Vector3.new(0.5, 0.5, 0.5) -- Increased size for visibility
+    A.Position = Position + Vector3.new(0, 3, 0) -- Raised height for better visibility
+    A.Transparency = 0.5 -- Slightly transparent to see through
+    A.BrickColor = BrickColor.new("Bright red")
+    A.Material = Enum.Material.Neon
     A.Parent = VisualFolder
     A.Name = tostring(Position)
-    B.Transparency = 1
+    
+    B.Transparency = 0.3
     B.Parent = A
     B.Adornee = A
     B.Color3 = Color3.new(1, 0, 0.0156863)
+    
+    -- Animate the sphere
     TweenService:Create(B, TweenI, {Transparency = 0}):Play()
+    
+    -- Add a small cylinder beam for better visibility
+    local beam = Instance.new("Part")
+    beam.Anchored = true
+    beam.CanCollide = false
+    beam.Size = Vector3.new(0.2, 5, 0.2)
+    beam.Position = Position + Vector3.new(0, 1, 0)
+    beam.Transparency = 0.3
+    beam.BrickColor = BrickColor.new("Bright red")
+    beam.Material = Enum.Material.Neon
+    beam.Parent = A
+    
+    return A -- Return the created part for tracking
 end
 
 local function UpdateVisualPoint(Point, Remove, Color)
+    if not Point or not Point.Parent then return end
+    
     task.spawn(function()
         if Remove == true then
             TweenService:Create(Point, TweenI, {Color3 = Color3.new(0.454902, 0.454902, 0.454902)}):Play()
             TweenService:Create(Point, TweenI, {Transparency = 1}):Play()
             task.wait(1)
-            Point.Parent:Destroy()
+            if Point and Point.Parent then
+                Point.Parent:Destroy()
+            end
         else
-            TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
+            if Color then
+                TweenService:Create(Point, TweenI, {Color3 = Color}):Play()
+            end
         end
     end)
 end
 
 local function ClearVisualPoints()
     if VisualFolder then
+        -- Destroy all children immediately
         for _, v in pairs(VisualFolder:GetChildren()) do
-            if v:FindFirstChild("SelectionSphere") then
-                UpdateVisualPoint(v.SelectionSphere, true)
-            else
-                v:Destroy()
-            end
+            v:Destroy()
         end
     end
+    VisualFolder = nil -- Reset folder
 end
 
 ---------------------------------------------------------------------
@@ -158,14 +181,6 @@ local function UpdateCharacterReferences()
     end
     return Character and Humanoid and HumanoidRootPart
 end
-
----------------------------------------------------------------------
--- NATIVE CLICKTOMOVE FALLBACK
--- Based on Roblox's updated 2017 ClickToMove (Garnold revision).
--- Uses FindPathAsync + MoveToFinished event-driven traversal,
--- with surface normal ground-snap retry and short-range direct walk.
--- Only activates when the primary custom path fails entirely.
----------------------------------------------------------------------
 
 ---------------------------------------------------------------------
 -- NATIVE CLICKTOMOVE FALLBACK
@@ -638,6 +653,7 @@ function WalkToSystem.WalkTo(Destination, Options)
     end
 
     if ShowVisuals then
+        print(string.format("[WalkToSystem] Creating %d visual waypoints", #waypoints))
         for _, v in pairs(waypoints) do
             CreateVisualPoint(v.Position)
         end
@@ -718,8 +734,7 @@ function WalkToSystem.WalkTo(Destination, Options)
         if not SkipNext then
             CurrentWaypoint = v
             Humanoid:MoveTo(v.Position)
-            WaypointStartTime = tick() -- Start timing this waypoint
-            WaypointStartTime = tick() -- Start timing this waypoint
+            WaypointStartTime = tick()
 
             local waypointTimer = 0
             local reachedWaypoint = false
