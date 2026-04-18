@@ -1,14 +1,11 @@
 --[[
-
 	Universal Aimbot Module by Exunys © CC0 1.0 Universal (2023 - 2024)
 	https://github.com/Exunys
 	Forked By - @xx4naxx on Youtube
 	feature added- Compatability for the Velocity executor and most executors
-
-]]
+--]]
 
 --// Cache
-
 local game, workspace = game, workspace
 local getrawmetatable, getmetatable, setmetatable, pcall, getgenv, next, tick = getrawmetatable, getmetatable, setmetatable, pcall, getgenv, next, tick
 local Vector2new, Vector3zero, CFramenew, Color3fromRGB, Color3fromHSV, Drawingnew, TweenInfonew = Vector2.new, Vector3.zero, CFrame.new, Color3.fromRGB, Color3.fromHSV, Drawing.new, TweenInfo.new
@@ -24,14 +21,12 @@ local __newindex = GameMetatable.__newindex
 local GetService = __index(game, "GetService")
 
 --// Services
-
 local RunService = GetService(game, "RunService")
 local UserInputService = GetService(game, "UserInputService")
 local TweenService = GetService(game, "TweenService")
 local Players = GetService(game, "Players")
 
 --// Service Methods
-
 local LocalPlayer = __index(Players, "LocalPlayer")
 local Camera = __index(workspace, "CurrentCamera")
 local FindFirstChild, FindFirstChildOfClass = __index(game, "FindFirstChild"), __index(game, "FindFirstChildOfClass")
@@ -42,7 +37,6 @@ local GetMouseLocation = __index(UserInputService, "GetMouseLocation")
 local GetPlayers = __index(Players, "GetPlayers")
 
 --// Variables
-
 local RequiredDistance, Typing, Running, ServiceConnections, Animation, OriginalSensitivity = 2000, false, false, {}
 local Connect, Disconnect = __index(game, "DescendantAdded").Connect
 
@@ -75,7 +69,6 @@ local function getPixelOffset(yOffset, camera)
 end
 
 --// Environment Table
-
 local Environment = {
 	DeveloperSettings = {
 		UpdateMode = "RenderStepped",
@@ -101,26 +94,25 @@ local Environment = {
 		Visible = true,
 		Radius = 90,
 		NumSides = 60,
-		Thickness = 2, -- Increased default thickness
-		Transparency = 1,
+		Thickness = 2,
+		Transparency = 1,        -- 0 = opaque, 1 = fully transparent
 		Filled = false,
 		RainbowColor = false,
 		RainbowOutlineColor = false,
 		Color = Color3fromRGB(255, 255, 255),
 		OutlineColor = Color3fromRGB(0, 0, 0),
 		LockedColor = Color3fromRGB(255, 150, 150),
-		YOffset = -0.007 -- Y-offset in studs (negative moves up)
+		YOffset = -0.007
 	},
 	FOVCircle = nil,
-	FOVStroke = nil, -- Main colored stroke (on top)
-	FOVOutlineStroke = nil, -- Outline stroke (behind)
+	FOVStroke = nil,            -- Main colored stroke (on top)
+	FOVOutlineStroke = nil,     -- Outline stroke (behind)
 	FOVGui = nil,
 }
 
 getgenv().ExunysDeveloperAimbot = Environment
 
---// GUI-based FOV Circle (based on your working script)
-
+--// GUI-based FOV Circle
 local function CreateFOVCircle()
 	local success, gui = pcall(function()
 		local FOVGui = Instance.new("ScreenGui")
@@ -147,32 +139,32 @@ local function CreateFOVCircle()
 		
 		Environment.FOVCircle = FOVFrame
 
-		-- Make it a circle (UICorner)
+		-- Make it a circle
 		local FOVCorner = Instance.new("UICorner")
 		FOVCorner.CornerRadius = UDim.new(1, 0)
 		FOVCorner.Parent = FOVFrame
 
-		-- OUTLINE STROKE (behind) - slightly thicker
+		-- OUTLINE STROKE (behind)
 		local FOVOutlineStroke = Instance.new("UIStroke")
-		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness + 1  -- Slightly thicker to create outline effect
+		FOVOutlineStroke.Thickness = Environment.FOVSettings.Thickness + 1
 		FOVOutlineStroke.Color = Environment.FOVSettings.OutlineColor
 		FOVOutlineStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		FOVOutlineStroke.LineJoinMode = Enum.LineJoinMode.Round
-		FOVOutlineStroke.Transparency = 0
+		FOVOutlineStroke.Transparency = Environment.FOVSettings.Transparency  -- Apply transparency
 		FOVOutlineStroke.Parent = FOVFrame
-		FOVOutlineStroke.ZIndex = 998  -- Behind main stroke
+		FOVOutlineStroke.ZIndex = 998
 		
 		Environment.FOVOutlineStroke = FOVOutlineStroke
 
-		-- MAIN STROKE (on top) - this is the visible color
+		-- MAIN STROKE (on top)
 		local FOVStroke = Instance.new("UIStroke")
 		FOVStroke.Thickness = Environment.FOVSettings.Thickness
 		FOVStroke.Color = Environment.FOVSettings.Color
 		FOVStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		FOVStroke.LineJoinMode = Enum.LineJoinMode.Round
-		FOVStroke.Transparency = 0
+		FOVStroke.Transparency = Environment.FOVSettings.Transparency  -- Apply transparency
 		FOVStroke.Parent = FOVFrame
-		FOVStroke.ZIndex = 999  -- On top of outline
+		FOVStroke.ZIndex = 999
 		
 		Environment.FOVStroke = FOVStroke
 		
@@ -190,7 +182,6 @@ end
 if LocalPlayer and __index(LocalPlayer, "PlayerGui") then
 	CreateFOVCircle()
 else
-	-- Retry when LocalPlayer is added
 	local playerAddedConn
 	playerAddedConn = Connect(__index(Players, "PlayerAdded"), function(player)
 		if player == LocalPlayer then
@@ -201,7 +192,6 @@ else
 end
 
 --// Core Functions
-
 local GetRainbowColor = function()
 	local RainbowSpeed = Environment.DeveloperSettings.RainbowSpeed
 	return Color3fromHSV(tick() % RainbowSpeed / RainbowSpeed, 1, 1)
@@ -256,7 +246,7 @@ local GetClosestPlayer = function()
 				Distance = (GetMouseLocation(UserInputService) - Vector).Magnitude
 
 				if Distance < RequiredDistance and OnScreen then
-					-- Wall check (cached + raycast)
+					-- Wall check
 					if Settings.WallCheck then
 						local now = tick()
 						local cached = WallCheckCache[Value]
@@ -265,7 +255,6 @@ local GetClosestPlayer = function()
 						if cached and now - cached.timestamp < 0.2 then
 							obstructed = cached.result
 						else
-							-- Perform raycast from camera to target part
 							local origin = Camera.CFrame.Position
 							local direction = PartPosition - origin
 							local raycastParams = RaycastParams.new()
@@ -307,7 +296,7 @@ print([[
 	Exunys,
 	Modified For Compatability By:
 	The NovaHub Team- ( @xx4naxx on YouTube )
-	]])
+]])
 
 local Load = function()
 	OriginalSensitivity = __index(UserInputService, "MouseDeltaSensitivity")
@@ -355,20 +344,24 @@ local Load = function()
 			FOVCircle.Position = UDim2.new(0, mousePos.X, 0, adjustedY)
 			FOVCircle.Visible = FOVSettings.Visible
 
-			-- Update strokes (Outline first, then main stroke on top)
+			-- Update strokes (transparency applied here as well)
+			local strokeTransparency = FOVSettings.Transparency
+
 			if Environment.FOVOutlineStroke then
 				Environment.FOVOutlineStroke.Color = outlineColor
 				Environment.FOVOutlineStroke.Thickness = FOVSettings.Thickness + 1
+				Environment.FOVOutlineStroke.Transparency = strokeTransparency
 			end
 			
 			if Environment.FOVStroke then
 				Environment.FOVStroke.Color = color
 				Environment.FOVStroke.Thickness = FOVSettings.Thickness
+				Environment.FOVStroke.Transparency = strokeTransparency
 			end
 
-			-- Fill and transparency (if filled mode is enabled)
+			-- Fill and transparency
 			if FOVSettings.Filled then
-				FOVCircle.BackgroundTransparency = FOVSettings.Transparency
+				FOVCircle.BackgroundTransparency = strokeTransparency
 				FOVCircle.BackgroundColor3 = color
 			else
 				FOVCircle.BackgroundTransparency = 1
@@ -402,8 +395,6 @@ local Load = function()
 
 						__newindex(UserInputService, "MouseDeltaSensitivity", 0)
 					end
-
-					-- Color already updated in the FOV section above
 				else
 					CancelLock()
 				end
@@ -457,7 +448,6 @@ local Load = function()
 end
 
 --// Typing Check
-
 ServiceConnections.TypingStartedConnection = Connect(__index(UserInputService, "TextBoxFocused"), function()
 	Typing = true
 end)
@@ -467,7 +457,6 @@ ServiceConnections.TypingEndedConnection = Connect(__index(UserInputService, "Te
 end)
 
 --// Public Methods
-
 function Environment.Exit(self)
 	assert(self, "EXUNYS_AIMBOT-V3.Exit: Missing parameter #1 \"self\" <table>.")
 	for Index, _ in next, ServiceConnections do
