@@ -3,6 +3,7 @@ if getgenv().Aiming then return getgenv().Aiming end
 -- // Dependencies
 local SignalManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/Signal/main/Manager.lua"))()
 local BeizerManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/Stefanuk12/ROBLOX/master/Universal/Aiming/BeizerManager.lua"))()
+local NovaDraw = loadstring(game:HttpGet("https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Redistributable%20%5B%20Code%20%5D/Custom%20Drawing%20Api%20%5B%20Universal%20%5D.lua"))()
 
 -- // Services
 local Players = game:GetService("Players")
@@ -17,7 +18,6 @@ local LocalPlayer = Players.LocalPlayer
 local CurrentCamera = Workspace.CurrentCamera
 
 -- // Optimisation Vars (ugly)
-local Drawingnew = Drawing.new
 local Color3fromRGB = Color3.fromRGB
 local GetGuiInset = GuiService.GetGuiInset
 local Randomnew = Random.new
@@ -87,33 +87,51 @@ do
     end
 end
 
--- // Create circle
-local circle = Drawingnew("Circle")
-circle.Transparency = 1
-circle.Thickness = 2
-circle.Color = Aiming.FOVColour
-circle.Filled = false
-Aiming.FOVCircle = circle
+-- // Create circle using NovaDraw
+local circle = nil
 
--- // Update
+-- // Update FOV function
 function Aiming.UpdateFOV()
-    -- // Make sure the circle exists
-    if not (circle) then
-        return
-    end
-
-    -- // Vars
+    -- // Get mouse position
     local MousePosition = GetMouseLocation(UserInputService)
-
-    -- // Set Circle Properties
-    circle.Visible = Aiming.ShowFOV
-    circle.Radius = (Aiming.FOV * 3)
-    circle.Position = MousePosition
-    circle.NumSides = Aiming.FOVSides
-    circle.Color = Aiming.FOVColour
-
-    -- // Return circle
+    
+    -- // Create or update circle
+    if not circle then
+        -- Create new circle
+        circle = NovaDraw.circle(
+            MousePosition.X, 
+            MousePosition.Y, 
+            (Aiming.FOV * 3), 
+            2, 
+            Aiming.FOVColour, 
+            false, 
+            Aiming.ShowFOV
+        )
+        NovaDraw.setSides(circle, Aiming.FOVSides)
+    else
+        -- Update existing circle properties
+        NovaDraw.moveCircle(circle, MousePosition.X, MousePosition.Y)
+        NovaDraw.resizeCircle(circle, (Aiming.FOV * 3))
+        NovaDraw.recolor(circle, Aiming.FOVColour)
+        NovaDraw.setSides(circle, Aiming.FOVSides)
+        
+        if Aiming.ShowFOV then
+            NovaDraw.show(circle)
+        else
+            NovaDraw.hide(circle)
+        end
+    end
+    
     return circle
+end
+
+-- // Clean up function for NovaDraw
+function Aiming.CleanupDrawings()
+    if circle then
+        NovaDraw.remove(circle)
+        circle = nil
+    end
+    NovaDraw.clearAll()
 end
 
 -- // Custom Functions
@@ -453,7 +471,7 @@ function Aiming.GetClosestPlayerToCursor()
             -- // Check if part exists, health and custom
             if (TargetPartTemp and Aiming.CheckHealth(Player) and Aiming.CheckCustom(Player)) then
                 -- // Check if is in FOV
-                if (circle.Radius > Magnitude and Magnitude < ShortestDistance) then
+                if (circle and NovaDraw.getRadius and (NovaDraw.getRadius(circle) > Magnitude and Magnitude < ShortestDistance)) then
                     -- // Check if Visible
                     if (Aiming.VisibleCheck and not Aiming.IsPartVisible(TargetPartTemp, Character)) then continue end
 
@@ -545,13 +563,20 @@ Heartbeat:Connect(function()
 end)
 
 -- // Credits (by disabling this and not including your own way of crediting within the script, e.g. credits tab, is violating the license agreement. Beware!)
-task.delay(1, function()
-    if (Aiming.ShowCredits) then
-        messagebox("Thanks to Stefanuk12 for their Aiming Module (v1).\n\nNote: This module is outdated, please see github.com/Stefanuk12/Aiming for the updated version!", "Credits", 0)
-    end
-end)
+print([[
+    Credits To:
+    - Stefanuk12 ( main implimentation of silent aim > Thanks so much :3)
+    - NovaHub ( NovaDraw )
+]])
+
+-- // Clean up when script is stopped
+local function cleanup()
+    Aiming.CleanupDrawings()
+end
+
+-- // Add cleanup to game closing
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(cleanup)
+game:GetService("CoreGui").ChildRemoved:Connect(cleanup)
 
 -- //
 return Aiming
-
--- // If you want the examples, look at the docs.
