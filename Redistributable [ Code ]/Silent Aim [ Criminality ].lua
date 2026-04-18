@@ -46,6 +46,7 @@ local Aiming = {
     FOVSides = 12,
     FOVColour = Color3fromRGB(231, 84, 128),
     FOVLockedColour = Color3fromRGB(255, 150, 150),   -- colour when target is locked
+    FOVOpacity = 1,                                   -- 0 = transparent, 1 = opaque
 
     VisibleCheck = true,
     ShowCredits = true,
@@ -81,7 +82,6 @@ getgenv().Aiming = Aiming
 -- // Create signals
 do
     local SignalNames = {"TargetPlayerChanged", "TargetPartChanged", "TargetPartPositionChanged", "TargetPartPositionOnScreenChanged"}
-
     for _, SignalName in ipairs(SignalNames) do
         Aiming.Signals:Create(SignalName)
     end
@@ -101,7 +101,7 @@ function Aiming.UpdateFOV()
     end
 
     local mousePos = GetMouseLocation(UserInputService)
-    local radius = Aiming.FOV * 3   -- because original used *3
+    local radius = Aiming.FOV * 3
 
     if not fovCircle then
         fovCircle = NovaDraw.circle(
@@ -111,7 +111,7 @@ function Aiming.UpdateFOV()
             2,                      -- thickness
             Aiming.FOVColour,
             false,                  -- filled = false
-            1                       -- opacity
+            Aiming.FOVOpacity       -- apply opacity
         )
         NovaDraw.setSides(fovCircle, Aiming.FOVSides)
     else
@@ -121,6 +121,7 @@ function Aiming.UpdateFOV()
 
         local colour = Aiming.Selected and Aiming.Selected ~= LocalPlayer and Aiming.FOVLockedColour or Aiming.FOVColour
         NovaDraw.recolor(fovCircle, colour)
+        NovaDraw.setOpacity(fovCircle, Aiming.FOVOpacity)   -- apply current transparency
 
         NovaDraw.show(fovCircle)
     end
@@ -128,13 +129,11 @@ end
 
 -- // Proper cleanup
 function Aiming.CleanupDrawings()
-    -- Disconnect heartbeat first so no more drawing calls occur
     if heartbeatConnection then
         heartbeatConnection:Disconnect()
         heartbeatConnection = nil
     end
 
-    -- Destroy the entire NovaDraw GUI and all tracked objects
     pcall(function()
         NovaDraw.destroy()
     end)
@@ -470,8 +469,8 @@ getgenv().UnloadSilentAim = fullCleanup
 -- // Credits
 print([[
     Credits To:
-    - Stefanuk12 ( main implimentation of silent aim )
-    - NovaHub ( NovaDraw )
+    - Stefanuk12 (main implementation of silent aim)
+    - NovaHub (NovaDraw)
 ]])
 
 return Aiming
