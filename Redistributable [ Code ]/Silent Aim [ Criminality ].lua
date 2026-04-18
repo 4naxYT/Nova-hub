@@ -17,7 +17,7 @@ local Heartbeat = RunService.Heartbeat
 local LocalPlayer = Players.LocalPlayer
 local CurrentCamera = Workspace.CurrentCamera
 
--- // Optimisation Vars (ugly)
+-- // Optimisation Vars
 local Color3fromRGB = Color3.fromRGB
 local GetGuiInset = GuiService.GetGuiInset
 local Randomnew = Random.new
@@ -35,7 +35,6 @@ local FindFirstChildWhichIsA = Instancenew("Part").FindFirstChildWhichIsA
 local FindFirstChild = Instancenew("Part").FindFirstChild
 local tableremove = table.remove
 local tableinsert = table.insert
-local RenderStepped = RunService.RenderStepped
 local GetMouseLocation = UserInputService.GetMouseLocation
 
 -- // Silent Aim Vars
@@ -46,6 +45,7 @@ local Aiming = {
     FOV = 60,
     FOVSides = 12,
     FOVColour = Color3fromRGB(231, 84, 128),
+    FOVLockedColour = Color3fromRGB(255, 150, 150),   -- colour when target is locked
 
     VisibleCheck = true,
     ShowCredits = true,
@@ -87,250 +87,198 @@ do
     end
 end
 
--- // Create circle using NovaDraw
-local circle = nil
+-- // NovaDraw FOV circle
+local fovCircle = nil
+local heartbeatConnection = nil
 
 -- // Update FOV function
 function Aiming.UpdateFOV()
-    -- // Get mouse position
-    local MousePosition = GetMouseLocation(UserInputService)
-    
-    -- // Create or update circle
-    if not circle then
-        -- Create new circle
-        circle = NovaDraw.circle(
-            MousePosition.X, 
-            MousePosition.Y, 
-            (Aiming.FOV * 3), 
-            2, 
-            Aiming.FOVColour, 
-            false, 
-            Aiming.ShowFOV
-        )
-        NovaDraw.setSides(circle, Aiming.FOVSides)
-    else
-        -- Update existing circle properties
-        NovaDraw.moveCircle(circle, MousePosition.X, MousePosition.Y)
-        NovaDraw.resizeCircle(circle, (Aiming.FOV * 3))
-        NovaDraw.recolor(circle, Aiming.FOVColour)
-        NovaDraw.setSides(circle, Aiming.FOVSides)
-        
-        if Aiming.ShowFOV then
-            NovaDraw.show(circle)
-        else
-            NovaDraw.hide(circle)
+    if not Aiming.ShowFOV then
+        if fovCircle then
+            NovaDraw.hide(fovCircle)
         end
+        return
     end
-    
-    return circle
+
+    local mousePos = GetMouseLocation(UserInputService)
+    local radius = Aiming.FOV * 3   -- because original used *3
+
+    if not fovCircle then
+        fovCircle = NovaDraw.circle(
+            mousePos.X,
+            mousePos.Y,
+            radius,
+            2,                      -- thickness
+            Aiming.FOVColour,
+            false,                  -- filled = false
+            1                       -- opacity
+        )
+        NovaDraw.setSides(fovCircle, Aiming.FOVSides)
+    else
+        NovaDraw.moveCircle(fovCircle, mousePos.X, mousePos.Y)
+        NovaDraw.resizeCircle(fovCircle, radius)
+        NovaDraw.setSides(fovCircle, Aiming.FOVSides)
+
+        local colour = Aiming.Selected and Aiming.Selected ~= LocalPlayer and Aiming.FOVLockedColour or Aiming.FOVColour
+        NovaDraw.recolor(fovCircle, colour)
+
+        NovaDraw.show(fovCircle)
+    end
 end
 
--- // Clean up function for NovaDraw
+-- // Proper cleanup
 function Aiming.CleanupDrawings()
-    if circle then
-        NovaDraw.remove(circle)
-        circle = nil
+    -- Disconnect heartbeat first so no more drawing calls occur
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
     end
-    NovaDraw.clearAll()
+
+    -- Destroy the entire NovaDraw GUI and all tracked objects
+    pcall(function()
+        NovaDraw.destroy()
+    end)
+
+    fovCircle = nil
 end
 
 -- // Custom Functions
 local CalcChance = function(percentage)
-    -- // Floor the percentage
     percentage = mathfloor(percentage)
-
-    -- // Get the chance
     local chance = mathfloor(Randomnew().NextNumber(Randomnew(), 0, 1) * 100) / 100
-
-    -- // Return
     return chance <= percentage / 100
 end
 
 -- // Customisable Checking Functions: Is a part visible
 function Aiming.IsPartVisible(Part, PartDescendant)
-    -- // Vars
     local Character = LocalPlayer.Character or CharacterAddedWait(CharacterAdded)
     local Origin = CurrentCamera.CFrame.Position
     local _, OnScreen = WorldToViewportPoint(CurrentCamera, Part.Position)
 
-    -- //
-    if (OnScreen) then
-        -- // Vars
+    if OnScreen then
         local raycastParams = RaycastParamsnew()
         raycastParams.FilterType = EnumRaycastFilterTypeBlacklist
         raycastParams.FilterDescendantsInstances = (typeof(Aiming.RaycastIgnore) == "function" and Aiming.RaycastIgnore() or Aiming.RaycastIgnore) or {Character, CurrentCamera}
 
-        -- // Cast ray
         local Result = Raycast(Workspace, Origin, Part.Position - Origin, raycastParams)
-
-        -- // Make sure we get a result
-        if (Result) then
-            -- // Vars
+        if Result then
             local PartHit = Result.Instance
-            local Visible = (not PartHit or IsDescendantOf(PartHit, PartDescendant))
-
-            -- // Return
-            return Visible
+            return (not PartHit or IsDescendantOf(PartHit, PartDescendant))
         end
     end
-
-    -- // Return
     return false
 end
 
 -- // Ignore player
 function Aiming.IgnorePlayer(Player)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredPlayers = Ignored.Players
 
-    -- // Find player in table
     for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
-        -- // Make sure player matches
-        if (IgnoredPlayer == Player) then
+        if IgnoredPlayer == Player then
             return false
         end
     end
 
-    -- // Blacklist player
     tableinsert(IgnoredPlayers, Player)
     return true
 end
 
 -- // Unignore Player
 function Aiming.UnIgnorePlayer(Player)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredPlayers = Ignored.Players
 
-    -- // Find player in table
     for i, IgnoredPlayer in ipairs(IgnoredPlayers) do
-        -- // Make sure player matches
-        if (IgnoredPlayer == Player) then
-            -- // Remove from ignored
+        if IgnoredPlayer == Player then
             tableremove(IgnoredPlayers, i)
             return true
         end
     end
-
-    -- //
     return false
 end
 
 -- // Ignore team
 function Aiming.IgnoreTeam(Team, TeamColor)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredTeams = Ignored.Teams
 
-    -- // Find team in table
     for _, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
-        if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
+        if IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor then
             return false
         end
     end
 
-    -- // Ignore team
-    tableinsert(IgnoredTeams, {Team, TeamColor})
+    tableinsert(IgnoredTeams, {Team = Team, TeamColor = TeamColor})
     return true
 end
 
 -- // Unignore team
 function Aiming.UnIgnoreTeam(Team, TeamColor)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredTeams = Ignored.Teams
 
-    -- // Find team in table
     for i, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
-        if (IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor) then
-            -- // Remove
+        if IgnoredTeam.Team == Team and IgnoredTeam.TeamColor == TeamColor then
             tableremove(IgnoredTeams, i)
             return true
         end
     end
-
-    -- // Return
     return false
 end
 
 -- //  Toggle team check
 function Aiming.TeamCheck(Toggle)
-    if (Toggle) then
+    if Toggle then
         return Aiming.IgnoreTeam(LocalPlayer.Team, LocalPlayer.TeamColor)
     end
-
     return Aiming.UnIgnoreTeam(LocalPlayer.Team, LocalPlayer.TeamColor)
 end
 
 -- // Check teams
 function Aiming.IsIgnoredTeam(Player)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredTeams = Ignored.Teams
 
-    -- // Check for others
-    if (Ignored.IgnoreOtherTeams) then
+    if Ignored.IgnoreOtherTeams then
         return (LocalPlayer.Team == Player.Team and LocalPlayer.TeamColor == Player.TeamColor)
     end
 
-    -- // Check if team is ignored
     for _, IgnoredTeam in ipairs(IgnoredTeams) do
-        -- // Make sure team matches
-        if (Player.Team == IgnoredTeam.Team and Player.TeamColor == IgnoredTeam.TeamColor) then
+        if Player.Team == IgnoredTeam.Team and Player.TeamColor == IgnoredTeam.TeamColor then
             return true
         end
     end
-
-    -- // Return
     return false
 end
 
 -- // Check if player (and team) is ignored
 function Aiming.IsIgnored(Player)
-    -- // Vars
     local Ignored = Aiming.Ignored
     local IgnoredPlayers = Ignored.Players
 
-    -- // Loop
     for _, IgnoredPlayer in ipairs(IgnoredPlayers) do
-        -- // Check if Player Id
-        if (typeof(IgnoredPlayer) == "number" and Player.UserId == IgnoredPlayer) then
+        if typeof(IgnoredPlayer) == "number" and Player.UserId == IgnoredPlayer then
             return true
         end
-
-        -- // Normal Player Instance
-        if (IgnoredPlayer == Player) then
+        if IgnoredPlayer == Player then
             return true
         end
     end
 
-    -- // Team check
     return Aiming.IsIgnoredTeam(Player)
 end
 
 -- // Get the Direction, Normal and Material
 function Aiming.Raycast(Origin, Destination, UnitMultiplier)
-    if (typeof(Origin) == "Vector3" and typeof(Destination) == "Vector3") then
-        -- // Handling
-        if (not UnitMultiplier) then UnitMultiplier = 1 end
-
-        -- // Vars
+    if typeof(Origin) == "Vector3" and typeof(Destination) == "Vector3" then
+        if not UnitMultiplier then UnitMultiplier = 1 end
         local Direction = (Destination - Origin).Unit * UnitMultiplier
         local Result = Raycast(Workspace, Origin, Direction)
-
-        -- // Make sure we have a result
-        if (Result) then
-            local Normal = Result.Normal
-            local Material = Result.Material
-
-            return Direction, Normal, Material
+        if Result then
+            return Direction, Result.Normal, Result.Material
         end
     end
-
-    -- // Return
     return nil
 end
 
@@ -341,14 +289,9 @@ end
 
 -- // Check Health
 function Aiming.CheckHealth(Player)
-    -- // Get Humanoid
     local Character = Aiming.Character(Player)
     local Humanoid = FindFirstChildWhichIsA(Character, "Humanoid")
-
-    -- // Get Health
     local Health = (Humanoid and Humanoid.Health or 0)
-
-    -- //
     return Health > 0
 end
 
@@ -366,38 +309,27 @@ Aiming.checkSilentAim = Aiming.Check
 -- // Get Closest Target Part
 function Aiming.GetClosestTargetPartToCursor(Character)
     local TargetParts = Aiming.TargetPart
-
-    -- // Vars
     local ClosestPart = nil
     local ClosestPartPosition = nil
     local ClosestPartOnScreen = false
     local ClosestPartMagnitudeFromMouse = nil
     local ShortestDistance = 1/0
 
-    -- //
     local function CheckTargetPart(TargetPart)
-        -- // Convert string -> Instance
-        if (typeof(TargetPart) == "string") then
+        if typeof(TargetPart) == "string" then
             TargetPart = FindFirstChild(Character, TargetPart)
         end
+        if not TargetPart then return end
 
-        -- // Make sure we have a target
-        if not (TargetPart) then
-            return
-        end
-
-        -- // Get the length between Mouse and Target Part (on screen)
         local PartPos, onScreen = WorldToViewportPoint(CurrentCamera, TargetPart.Position)
         PartPos = Vector2.new(PartPos.X, PartPos.Y)
 
         local MousePosition = GetMouseLocation(UserInputService)
         local GuiInset = GetGuiInset(GuiService)
         local AccountedPos = PartPos - GuiInset
-
         local Magnitude = (AccountedPos - MousePosition).Magnitude
 
-        -- //
-        if (Magnitude < ShortestDistance) then
+        if Magnitude < ShortestDistance then
             ClosestPart = TargetPart
             ClosestPartPosition = PartPos
             ClosestPartOnScreen = onScreen
@@ -406,41 +338,27 @@ function Aiming.GetClosestTargetPartToCursor(Character)
         end
     end
 
-    -- // String check
-    if (typeof(TargetParts) == "string") then
-        -- // Check if it all
-        if (TargetParts == "All") then
-            -- // Loop through character children
+    if typeof(TargetParts) == "string" then
+        if TargetParts == "All" then
             for _, v in ipairs(Character:GetChildren()) do
-                -- // See if it a part
-                if not (v:IsA("BasePart")) then
-                    continue
+                if v:IsA("BasePart") then
+                    CheckTargetPart(v)
                 end
-
-                -- // Check it
-                CheckTargetPart(v)
             end
         else
-            -- // Individual
             CheckTargetPart(TargetParts)
         end
-    end
-
-    -- //
-    if (typeof(TargetParts) == "table") then
-        -- // Loop through all target parts and check them
+    elseif typeof(TargetParts) == "table" then
         for _, TargetPartName in ipairs(TargetParts) do
             CheckTargetPart(TargetPartName)
         end
     end
 
-    -- //
     return ClosestPart, ClosestPartPosition, ClosestPartOnScreen, ClosestPartMagnitudeFromMouse
 end
 
 -- // Silent Aim Function
 function Aiming.GetClosestPlayerToCursor()
-    -- // Vars
     local TargetPart = nil
     local ClosestPlayer = nil
     local PartPosition = nil
@@ -448,34 +366,24 @@ function Aiming.GetClosestPlayerToCursor()
     local Chance = CalcChance(Aiming.HitChance)
     local ShortestDistance = 1/0
 
-    -- // Chance
-    if (not Chance) then
+    if not Chance then
         Aiming.Selected = LocalPlayer
         Aiming.SelectedPart = nil
         Aiming.SelectedPosition = nil
         Aiming.SelectedPositionOnScreen = nil
-
         return LocalPlayer
     end
 
-    -- // Loop through all players
     for _, Player in ipairs(GetPlayers(Players)) do
-        -- // Get Character
         local Character = Aiming.Character(Player)
 
-        -- // Make sure isn't ignored and Character exists
-        if (Aiming.IsIgnored(Player) == false and Character) then
-            -- // Vars
+        if not Aiming.IsIgnored(Player) and Character then
             local TargetPartTemp, PartPositionTemp, PartPositionOnScreenTemp, Magnitude = Aiming.GetClosestTargetPartToCursor(Character)
 
-            -- // Check if part exists, health and custom
-            if (TargetPartTemp and Aiming.CheckHealth(Player) and Aiming.CheckCustom(Player)) then
-                -- // Check if is in FOV
-                if (circle and NovaDraw.getRadius and (NovaDraw.getRadius(circle) > Magnitude and Magnitude < ShortestDistance)) then
-                    -- // Check if Visible
-                    if (Aiming.VisibleCheck and not Aiming.IsPartVisible(TargetPartTemp, Character)) then continue end
+            if TargetPartTemp and Aiming.CheckHealth(Player) and Aiming.CheckCustom(Player) then
+                if fovCircle and NovaDraw.getRadius and (NovaDraw.getRadius(fovCircle) > Magnitude and Magnitude < ShortestDistance) then
+                    if Aiming.VisibleCheck and not Aiming.IsPartVisible(TargetPartTemp, Character) then continue end
 
-                    -- // Set vars
                     ClosestPlayer = Player
                     ShortestDistance = Magnitude
                     TargetPart = TargetPartTemp
@@ -486,21 +394,19 @@ function Aiming.GetClosestPlayerToCursor()
         end
     end
 
-    -- // Firing changed signals
-    if (Aiming.Selected ~= ClosestPlayer) then
+    if Aiming.Selected ~= ClosestPlayer then
         Aiming.Signals:Fire("TargetPlayerChanged", ClosestPlayer)
     end
-    if (Aiming.SelectedPart ~= TargetPart) then
+    if Aiming.SelectedPart ~= TargetPart then
         Aiming.Signals:Fire("TargetPartChanged", TargetPart)
     end
-    if (Aiming.SelectedPosition ~= PartPosition) then
+    if Aiming.SelectedPosition ~= PartPosition then
         Aiming.Signals:Fire("TargetPartPositionChanged", PartPosition)
     end
-    if (Aiming.SelectedPositionOnScreen ~= PartPositionOnScreen) then
+    if Aiming.SelectedPositionOnScreen ~= PartPositionOnScreen then
         Aiming.Signals:Fire("TargetPartPositionOnScreenChanged", PartPositionOnScreen)
     end
 
-    -- // End
     Aiming.Selected = ClosestPlayer
     Aiming.SelectedPart = TargetPart
     Aiming.SelectedPosition = PartPosition
@@ -521,17 +427,9 @@ end
 -- // Beizer Aim Curves
 Aiming.BeizerCurve = {}
 do
-    -- // Information
-    --[[
-        A deals with mouse movements
-        B deals with custom movements, e.g. camera
-    ]]
-
-    -- // Vars
     local ManagerA = BeizerManager.new()
     local ManagerB = BeizerManager.new()
 
-    -- // Functions
     Aiming.BeizerCurve.ManagerA = ManagerA
     Aiming.BeizerCurve.ManagerB = ManagerB
 
@@ -542,41 +440,38 @@ do
         ManagerB:ChangeData(...)
     end
 
-    -- // Convert B to Camera Mode
     ManagerB:CameraMode()
-
-    -- // Convert function to use Aiming
     ManagerB.Function = function(Pitch, Yaw)
         local RotationMatrix = CFrame.fromEulerAnglesYXZ(Pitch, Yaw, 0)
         Aiming.SetCameraCFrame(CFrame.new(CurrentCamera.CFrame.Position) * RotationMatrix)
     end
 
-    -- // Start
     ManagerA:Start()
     ManagerB:Start()
 end
 
--- // Heartbeat Function
-Heartbeat:Connect(function()
+-- // Heartbeat loop (stored for cleanup)
+heartbeatConnection = Heartbeat:Connect(function()
     Aiming.UpdateFOV()
     Aiming.GetClosestPlayerToCursor()
 end)
 
--- // Credits (by disabling this and not including your own way of crediting within the script, e.g. credits tab, is violating the license agreement. Beware!)
-print([[
-    Credits To:
-    - Stefanuk12 ( main implimentation of silent aim > Thanks so much :3)
-    - NovaHub ( NovaDraw )
-]])
-
--- // Clean up when script is stopped
-local function cleanup()
+-- // Cleanup when script is unloaded
+local function fullCleanup()
     Aiming.CleanupDrawings()
 end
 
--- // Add cleanup to game closing
-game:GetService("Players").LocalPlayer.OnTeleport:Connect(cleanup)
-game:GetService("CoreGui").ChildRemoved:Connect(cleanup)
+-- Attach to teleport
+LocalPlayer.OnTeleport:Connect(fullCleanup)
 
--- //
+-- If your executor supports a global unload function, set it
+getgenv().UnloadSilentAim = fullCleanup
+
+-- // Credits
+print([[
+    Credits To:
+    - Stefanuk12 ( main implimentation of silent aim )
+    - NovaHub ( NovaDraw )
+]])
+
 return Aiming
