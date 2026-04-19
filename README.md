@@ -4,7 +4,7 @@
 
 Created By **@xx4naxx** On Youtube- [ **https://www.youtube.com/@xx4naxx** ]
 
-Offitial **Discord** Server- [_**https://discord.gg/8HDEWZVUem**_]
+Offitial **Discord** Server- [_**https://discord.gg/vwnjCjFzkk**_]
 
 ```lua
 -- Note: This is a Legit / Semi-rage Script
