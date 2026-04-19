@@ -21,116 +21,204 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 
 ---
 
-## **✨ Features**
+# **✨ Features**
 
-### 🎯 **Combat**
-- **Aimbot** – Advanced Lock System Based On [ _https://github.com/Exunys/AirHub-V2_ ]
-- **Triggerbot** - customisable delay [__CUSTOM__]
-- **Hitbox Extender** [BETA] – Expand player hitboxes
-- **ESP** (2D, 3D, Corner) - [ **CUSTOM** ]
-  - Health Bars
-  - Tracers
-  - Head Dots
-  - Look Direction
-  - Self Esp
-- **Touch Fling** / **Anti Fling**
-- **Kill / Reset** [Self]
+## 🌐 Universal
 
-### 🚀 **Movement & Utility**
-- **Player Teleport**
-  - Loop TP
-  - Click TP
-- **Speed Hack** & **Jump Power**
-- **Infinite Jump**
-- **Fly** [Basic]
-- **No Clip** [Mostly]
-- **Anti Void**
-
-### 🎮 **Visual & Client-Side**
-- **Full Bright**
-- **FOV Changer**
-- **B Tools** [Client-Side]
-- **Chat Visibility** [WIP]
-- **Invisible Tool** [RISKY]
+### 🎯 Combat
+- **Aimbot** Advanced Lock System Based On [ _https://github.com/Exunys/AirHub-V2_ ]
+  - Lock modes  
+  - FOV circle – radius, color, transparency, edge count  
+  - Prediction  
+  - Team check  
+  - Wall check  
+  - Keybind  
+- **Triggerbot**  
+  - Customisable delay  
+  - Trigger key  
+- **Hitbox Extender** *[WIP]*  
+  - Adjustable hitbox size  
+  - Transparency control  
 
 
-## 🎲 Criminality-Specific Features
+### 👁️ ESP / Visuals (Meticulously Detailed)
+- **ESP** (2D Box, 3D Box, Corner Box)  
+  - Color, thickness, transparency, rounded edges  
+- **Name Labels**  
+  - Color, scale with distance  
+- **Health Bars**  
+  - Side placement, width, transparency  
+- **Head Dots**  
+  - Size, fill, opacity  
+- **Tracers**  
+  - Mouse tracer & bottom tracer  
+  - Color, transparency  
+- **Chams / Highlights**  
+  - Team color override  
+  - Persistent option  
+- **Held Item ESP**  
+  - Base size, scale with distance  
+- **Distance Display**  
+- **Self ESP**  
+- **Inventory Viewer**  
+- **Initialize / Refresh / Clear ESP**  
 
-### 👁️ ESP & Highlights
-- **Dealers** — Highlight dealers & armory dealers
-- **Vending Machines**
-- **Safes** — Highlight broken & intact safes
-- **ATMs** 
-- **Toggle All Highlights** 
 
-### 🛡️ Player Buffs & Anti-Stuns
-- **No Ragdoll / No Downed / No Flame Stun / No Bleed**
-- **Anti-Down Carry** — Prevent enemies from carrying you while downed
-- **No Limp**
-- **Anti-Combat Zone**
-- **Anti-Fog**
-- **Remove Screen Overlays [WIP]** — Blood, frost, shellshock, flashbang, concussion effects
-- **Remove Camera Shake [WIP]**
+### 🚀 Movement & Player
+- **Speed Modifier**  
+- **Infinite Jump**  
+- **Jump Power**  
+- **Gravity Manipulation**  
+- **Levitate**  
+- **No-Clip**  
+- **Fly** – method dropdown  
+- **Fake Down**  
+- **Kill / Reset Character**  
+- **Anti-Void Protection**  
+- **Unlock From First-Person**
+- **Camera Wallbang**
+- **Toggle Shiftlock**
 
-### 🎭 Spoofing & Stat Modification
-- **Spoof VIP Server Status** 
-- **Spoof Armor** 
-- **Spoof Double XP Gamepass** — Attempt fake double XP
-- **Modify Level**   [CLIENT-SIDED]
-- **Modify Cash**    [CLIENT-SIDED]
-- **Modify Bounty**  [CLIENT-SIDED]
-- **Modify Bank**    [CLIENT-SIDED]
-- **Persistent Mods** — Keep modifications across respawns
+
+### 📡 Teleport
+- **Teleport to Player**  
+- **Loop Teleport** – method selection, delay  
+- **Click TP** – keybind  
+- **Teleport to Spawn**  
+
+
+### 🎮 Camera & Chat
+- **FOV Changer** – slider + reset  
+- **Camera Wallbang**  
+- **Max Camera Zoom**  
+- **Allow Shiftlock**  
+- **Chat Visibility** *[WIP]*  
+
+
+### 🎵 Misc & Utility
+- **Touch Fling / Anti-Fling** – rotation, offset, options  
+- **FullBright**  
+- **B Tools** *[Client-Side]*  
+- **FE Console MSG** *[Beta]*  
+- **Music Player** – song select from Audio folder  
+- **Script Loader**  
+- **Save Game File** *[Beta]*  
+- **Niggerify All** *[Except Script User]*  
+- **PANIC Button** – kills UI instantly  
+- **Reset Settings**  
+- **Suggestions Panel**  
+- **SaveInstance** *[Safe]*  
+
+
+## ⚙️ Optimization & Misc
+- **Script Loader** – *Mostly keyless, tested for efficiency*  
+- **Console MSG** *[Currently Bugged]*  
+- **SaveInstance** *[Safe]*  
+- **Niggerify All** *[Except Script User]*  
+- **FFLAGS Optimization**  
+  - Material Optimization *[Execution Takes Some Time]*  
+  - Lighting Optimization *[WIP]*  
+
+---
+
+## 🎲 Criminality
+
+### 🎯 Combat (Exclusive)
+- **Ragebot** – Target selector, fire rate, custom spread, no recoil  
+- **China Hat**  
+- **Melee Aura** – Melee distance control  
+
+### 👁️ Map ESP & Highlights
+- **Highlight Dealers** – color picker  
+- **Highlight Armory Dealers** – color picker  
+- **Highlight Safes** (broken & intact) – color picker  
+- **Highlight ATMs** – color picker  
+- **Highlight Vending Machines** – color picker  
+- **Toggle All Highlights**  
+
+### 🛡️ Player State & Anti-Stuns
+- **No Ragdoll / No Downed / No Flame Stun / No Bleed**  
+- **No Limp**  
+- **No Flash**  
+- **No Fall / Barbed Wire Damage**  
+- **No Smoke**  
+- **Anti-Down Carry** – prevents enemies carrying you while downed  
+- **Anti-Combat Zone**  
+- **Anti-Fog**  
+- **Remove Screen Overlays** *[Beta]* – blood, frost, shellshock, flashbang, concussion  
+- **Anti-Admin / Anti-Jail / Anti-Handcuff**  
+- **Persistent Mods** – keeps state across respawns  
+
+### 🎭 Spoofing & Stat Modifiers *[Client-Sided]*
+- **Spoof VIP Server Status**  
+- **Spoof Armour**  
+- **Spoof Double XP Gamepass**  
+- **Level Modifier**  
+- **Cash Modifier**  
+- **Bounty Modifier**  
+- **Bank Modifier**  
 
 ### ⚙️ Gameplay Utilities
-- **EZ Lockpick**
-- **Instant Interact** — Pick up cash instantly
-- **Auto Safe Loot** — Automatically loot safes
-- **Speed Multiplier** — legit / semi-rage
-- **Finish Speed Multiplier Modifier**
-- **Walk Audio Modifier** [CLIENT-SIDED]
-- **Brightness Multiplier** [CLIENT-SIDED]
+- **EZ Lockpick**  
+- **Instant Interact** – pick up cash instantly  
+- **Auto Safe Loot**  
+- **Auto Farm** – safes & registers loop  
+- **Walk to Closest Safe / Dealer** – `PosPart`-priority navigation  
+- **Safe Walk Teleport** – visual waypoint system  
+- **Click to Walk** – click-to-move navigation  
+- **Predefined TP Locations** – map location list  
+- **Finish Speed Multiplier** *[WIP]*  
+- **Walk Audio Modifier** *[Client-Sided]*  
+- **Brightness Multiplier** *[Client-Sided]*  
+- **Infinite Pepper Spray**  
+- **Pepper Spray Aura**  
+- **Open / Unlock Nearby Doors**  
+- **Rocket Snipe** – TP method selector  
+- **Hole Patch System**
+- **Disable Doors** 
 
-### 🚔 Anti-Admin / Protection
-- **Anti-Jail**
-- **Anti-Handcuff** 
-- **Auto-kick on Jail/Handcuff** — Automatically leave server when detained
+### 🔊 Voice & Camera
+- **Voice Chat Bypass** *[Beta]*  
+- **Mic Control**  
+- **Camera Manipulation**  
 
-### 🖥️ UI & Miscellaneous
-- **Replace Server Version** — Show "Novahub" instead of game version
-- **Heavy Optimisation**
+### 🔫 Weapon Extras
+- **Gun Mods** – no recoil, custom spread, auto reload  
+- **Auto Pickup Cash**  
+- **No Jump Cooldown**  
 
+---
 
-## ⚔️ Dishonored Module
+## ⚔️ Dishonored
 
 ### 💪 Stats & Movement
-- **Infinite Stamina** 
-- **Speed Modifier** 
-- **Attack Speed Boost**[OP] - Very fast attack speed no matter the weapon
+- **Infinite Stamina**  
+- **Speed Modifier**  
+- **Attack Speed Boost** *[OP]* – massively increases attack speed regardless of weapon  
 
-### 🛡️ Combat & State Control
-- **Not Disabled** — Prevent all disabling effects:
-  - ✅ Can always cancel actions
-  - ✅ Can always jump
-  - ✅ Can always parry
-  - ✅ Can always run
-  - ✅ Can always use items
-  - ✅ Can always counter-attack
-  - ✅ Keep both arms functional
-  - ✅ Never finished/ragdolled/parried
-  - ✅ Auto-remove downed state
-- **Fake Down**
+### 🛡️ Combat State Control
+- **Not Disabled** – forces all combat stats true on a Heartbeat loop  
+  - ✅ CanCancel, CanJump, CanParry, CanRun, CanUse, CounterAttack  
+  - ✅ HaveRightArm always true  
+  - ✅ Finished / Ragdolled / Parried forced false  
+  - ✅ Auto-clears Downed state  
+- **Fake Down** – manually toggles downed state  
 
+---
 
+## 🌙 Bite By Night
 
-### ⚙️ **Optimization & Misc**
-- _**Script Loader**_ [_**Mostly**_ Keyless, And **Tested** for Efficiency]
-- **Console MSG** [Currently Bugged]
-- **SaveInstance** [SAFE]
-- **Niggerify All** [Except The Script User]
-- **FFLAGS Optimization**
-  - Material Optimization [Execution Takes Some Time]
-  - Lighting Optimization [WIP]
+### 💪 Stats & Movement
+- **Infinite Stamina**  
+- **Speed Modifier** – Legit & Blatant modes  
+- **Jump Height Modifier**  
+- **Allow Running** – force enables sprinting  
+- **Allow Jumping** – force enables jumping  
+- **No Stun** – disables stun states  
+
+---
+
+> **Note:** The Script Type Gets Auto-Selected When Using The Nova Loader in-Game If You Use The Given Loadstring So Please Do Not Try To Use Weird Emulation To Load Nova. If No Specalised Game Is Detected It Will Load The Universal Version
 
 ---
 
