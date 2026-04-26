@@ -35,7 +35,6 @@ local function initiate_loading_screen()
             msg = msg .. " (" .. tostring(details) .. ")"
         end
         table.insert(logEntries, msg)
-        print(msg)
     end
 
     -- ──────────────────────────────────────────
