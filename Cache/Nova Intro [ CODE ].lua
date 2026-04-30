@@ -1,8 +1,10 @@
 --[[
 
 // gives a debug msg for verifying Steps
-
 getgenv().Nova_LS_Debug = true
+
+// Disables The Intro Entirely
+getgenv().Disable_Intro == true
 
 ]]
 
@@ -769,4 +771,6 @@ local function initiate_loading_screen()
     print("[Nova - Loading Screen] Finished.")
 end
 
-initiate_loading_screen()
+if not (getgenv().Disable_Intro == true) then
+    initiate_loading_screen()
+end
