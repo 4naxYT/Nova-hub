@@ -256,8 +256,9 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **🔧 Supported Executors**
-- _**Velocity**_ [ _**https://gofile.io/d/biQGwp**_ ] ( _Offitialy Supported_ )
-- _Bunni_ [ _**https://bunni.fun**_ ]
+- _**Madium**_ [ _**https://gofile.io/d/MpnvOZ**_ ] (_Currently **Best**_)
+- _Velocity_ [ _**https://gofile.io/d/biQGwp**_ ] ( _Offitialy Supported_ )
+- Bunni [ _**https://bunni.fun**_ ]
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Guaranteed !_ )
 - Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
 - Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_) (__Not__ Fully Supported)
@@ -271,6 +272,10 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - Reasons For Kick:
   - Using The **Wrong** NovaHub *Version*
   - NovaHub Is Currently **Offline** ( probably due to mainanence )
+  - Issue With Key
+  - Trying to De-Obsfucate Nova
+  - Trying to Gain Insight into Our Code (using rspys/other tools)
+  - Blocking Essential Debug Info (like username collection)
   - You  Might Be **BlackListed**
     - If You Are **Blacklisted** then Contact **```@xx4naxx On Youtube```** or **```.4nax On Discord```** For An **Unblacklist** And For Instructions On How To **Refresh Blacklist Status**
 - Report bugs via The [Discord Server](**https://discord.gg/8HDEWZVUem**)
