@@ -9,6 +9,7 @@ Offitial **Discord** Server- [_**https://discord.gg/vwnjCjFzkk**_]
 ```lua
 -- Note: This is a Legit / Semi-rage Script
 -- By Executing This Script You Agree To The NovaHub Terms Of Service - [ https://github.com/4naxYT/Nova-hub/blob/main/README.md#%EF%B8%8F-disclaimer ]
+getgenv().Disable_Intro == false
 loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/heads/main/Latest%20NovaHub.lua'))()
 ```
 
