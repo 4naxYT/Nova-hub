@@ -257,7 +257,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 ---
 
 ## **🔧 Supported Executors**
-- _**Madium**_ [ _**https://gofile.io/d/MpnvOZ**_ ] (_Currently **Best**_)
+- _**Madium**_ [ _**https://work.ink/2nLR/madium-install**_ ] (_Currently **Best**_)
 - _Velocity_ [ _**https://gofile.io/d/biQGwp**_ ] ( _Offitialy Supported_ )
 - Bunni [ _**https://bunni.fun**_ ] ( _Troublesome Keysystem_ )
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Guaranteed !_ )
