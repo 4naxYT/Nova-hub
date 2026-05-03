@@ -263,7 +263,7 @@ loadstring(game:HttpGet('https://raw.githubusercontent.com/4naxYT/Nova-hub/refs/
 - Solara [ _**https://getsolara.dev/download/static/files/BootstrapperNew.exe**_ ] ( _Security Not Guaranteed !_ )
 - Wave [_**https://getwave.gg/resellers**_] ( _Paid_ )
 - Delta [ _**https://delta-executor.com/**_ ] (Best For _Mobile_) (__Not__ Fully Supported)
-- Xeno [ _**https://www.xeno.onl/method**_ ] ( _**DISCONTINUED SUPPORT**_ )
+- Xeno [ _**https://www.xeno.onl/method**_ ] ( _**Restricted Features**_ )
 - _etc.._
 
 ---
